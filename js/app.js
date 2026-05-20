@@ -473,10 +473,9 @@ async function actualizarInforme() {
   // Detectar si estamos en GitHub Pages
   const esGitHubPages = window.location.hostname.includes('github.io');
   const rutaLogo = esGitHubPages 
-      ? '/inspecci-n-extintores/%7Bassets/clientes/105/LOGO%20SDB.png'  // URL encode
-      : '{assets/clientes/105/LOGO SDB.png';
-  const logoBase64 = await logoABase64('https://raw.githubusercontent.com/jesusmeza252627-lang/inspecci-n-extintores/main/%7Bassets/clientes/105/LOGO%20SDB.png');
-
+      ? '/inspecci-n-extintores/assets/clientes/105/LOGO SDB.png'
+      : 'assets/clientes/105/LOGO SDB.png';
+  const logoBase64 = await logoABase64(rutaLogo);
     // ── Encabezado institucional (se repite en cada hoja) ──
   const encabezadoHTML = `
       <table style="width:100%;border-collapse:collapse;margin-bottom:16px;font-size:11px;">
