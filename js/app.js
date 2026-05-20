@@ -318,11 +318,15 @@ function editarRegistro(id) {
 
 async function eliminarRegistro(id) {
   if (!confirm("¿Eliminar registro?")) return;
-  await sheetsEliminar(id);
+  
+  // Quitar de la UI inmediatamente sin esperar al backend
   registros = registros.filter(x => x.id !== id);
   renderTabla();
   actualizarDashboard();
   await actualizarInforme();
+
+  // Luego sincronizar con backend en segundo plano
+  await sheetsEliminar(id);
 }
 
 // ── Render Tabla ──
