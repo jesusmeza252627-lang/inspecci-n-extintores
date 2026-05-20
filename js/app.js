@@ -446,6 +446,7 @@ async function actualizarInforme() {
     let cliente = document.getElementById("cliente").value || "-";
     let sede = document.getElementById("Sede").value || "-";
     let fechaInspeccion = document.getElementById("fechaInspeccion").value || new Date().toLocaleDateString();
+    let rutaLogoCompleta;
 
     if ((cliente === "-" || cliente === "") && registros.length > 0) {
       const primerRegistro = registros[0];
@@ -469,7 +470,12 @@ async function actualizarInforme() {
       `;
       return;
     }
-    const logoBase64 = await logoABase64("assets/clientes/105/LOGO SDB.png");
+  // Detectar si estamos en GitHub Pages
+  const esGitHubPages = window.location.hostname.includes('github.io');
+  const rutaLogo = esGitHubPages 
+      ? '/inspecci-n-extintores/%7Bassets/clientes/105/LOGO%20SDB.png'  // URL encode
+      : '{assets/clientes/105/LOGO SDB.png';
+  const logoBase64 = await logoABase64('https://raw.githubusercontent.com/jesusmeza252627-lang/inspecci-n-extintores/main/%7Bassets/clientes/105/LOGO%20SDB.png');
 
     // ── Encabezado institucional (se repite en cada hoja) ──
   const encabezadoHTML = `
