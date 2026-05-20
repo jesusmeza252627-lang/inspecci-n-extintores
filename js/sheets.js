@@ -17,15 +17,31 @@ function sheetsEnabled() {
 
 // ── Guardar un registro en Sheets ──
 async function sheetsGuardar(registro) {
-  const res = await fetch(CONFIG.APPS_SCRIPT_URL, {
-    method: "POST",
-    body: JSON.stringify({
-      action: "guardar",
-      registro
-    })
-  });
-
-  return await res.json();
+  if (!sheetsEnabled()) {
+    localGuardar(registro);
+    return { status: "ok", imagenes: [] };
+  }
+  setSyncStatus("⏳ Guardando...", "sync-loading");
+  try {
+    const res = await fetch(CONFIG.APPS_SCRIPT_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain" }, // Apps Script requiere text/plain para evitar preflight CORS
+      body: JSON.stringify({ action: "guardar", registro })
+    });
+    const data = await res.json();
+    if (data.status === "ok") {
+      setSyncStatus("✅ Guardado", "sync-ok");
+      localGuardar(registro); // caché local también
+      return data;
+    } else {
+      throw new Error(data.message || "Error desconocido");
+    }
+  } catch (e) {
+    console.error("Sheets error:", e);
+    setSyncStatus("⚠️ Sin conexión — guardado local", "sync-error");
+    localGuardar(registro);
+    return { status: "ok", imagenes: [], _local: true };
+  }
 }
 
 // ── Obtener todos los registros desde Sheets ──

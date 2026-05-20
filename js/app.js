@@ -226,9 +226,14 @@ async function guardarRegistro() {
       return;
     }
 
+    // En guardarRegistro(), reemplazar líneas 229-231 por:
+    const regFinal = { ...reg };
+    if (res.imagenes && res.imagenes.length > 0) {
+      regFinal.imagenes = res.imagenes; // URLs de Drive en vez de base64
+    }
     const idx = registros.findIndex(x => x.id === reg.id);
-    if (idx === -1) registros.push(reg);
-    else registros[idx] = reg;
+    if (idx === -1) registros.push(regFinal);
+    else registros[idx] = regFinal;
 
     limpiarFormulario();
     renderTabla();
