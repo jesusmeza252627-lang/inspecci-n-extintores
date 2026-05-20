@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Módulo - Inspección de Extintores</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<div class="container">
+
+  <div class="header">
+    <h1>🧯 Módulo de Inspección de Extintores Portátiles</h1>
+    <p>Registro, control e inspección de extintores.</p>
+    <div id="syncStatus" class="sync-status">⬜ Sin cambios</div>
+  </div>
+
+  <div class="meta-grid">
+
+    <div class="card field">
+      <label>Código - SHK</label>
+      <select id="codigoSHK" onchange="autocompletarCliente()">
+        <option value="">Seleccione código</option>
+        <option value="100">100</option>
+        <option value="101">101</option>
+        <option value="102">102</option>
+        <option value="103">103</option>
+        <option value="104">104</option>
+        <option value="105">105</option>
+        <option value="106">106</option>
+        <option value="107">107</option>
+        <option value="108">108</option>
+        <option value="109">109</option>
+        <option value="110">110</option>
+      </select>
+    </div>
+
+    <div class="card field">
+      <label>Cliente</label>
+      <input id="cliente" type="text" readonly placeholder="Se completa automáticamente">
+    </div>
+
+    <div class="card field">
+      <label>Sede / Proceso</label>
+      <input id="Sede" type="text">
+    </div>
+
+    <div class="card field">
+      <label>Código de formato</label>
+      <input id="codigoFormato" type="text" value="FO-SG-SST-ADM-DG-19">
+    </div>
+
+    <div class="card field">
+      <label>Fecha de inspección</label>
+      <input id="fechaInspeccion" type="date">
+    </div>
+
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('inspeccion',this)">📋 Inspección</button>
+    <button class="tab-btn" onclick="switchTab('dashboard',this)">📊 Dashboard</button>
+    <button class="tab-btn" onclick="switchTab('informe',this)">📄 Informe</button>
+  </div>
+
+  <!-- TAB INSPECCIÓN -->
+  <div id="tab-inspeccion" class="tab-content active">
+
+    <div class="toolbar">
+      <button class="action success" onclick="nuevoRegistro()">➕ Agregar registro</button>
+      <button class="action primary" onclick="guardarRegistro()">💾 Guardar</button>
+      <button class="action secondary" onclick="limpiarFormulario()">🧹 Limpiar</button>
+      <button class="action warning" onclick="exportarExcel()">📥 Exportar a Excel</button>
+      <button class="action primary" onclick="sincronizarDesdeSheets()" title="Recargar datos desde Google Sheets">🔄 Recargar</button>
+    </div>
+
+    <div class="card" style="margin-bottom:16px;">
+
+      <div class="form-grid">
+
+        <div class="field">
+          <label>N° de EEP</label>
+          <input id="numeroExtintor" type="text">
+        </div>
+
+        <div class="field">
+          <label>Tipo de Agente</label>
+          <select id="tipoAgente">
+            <option value="">Seleccione</option>
+            <option>PQS</option>
+            <option>H2O-P</option>
+            <option>H2O-DI</option>
+            <option>ADP/PK</option>
+            <option>Otros</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>Capacidad</label>
+          <div style="display:flex; gap:8px;">
+            <input id="capacidad" type="number" min="0.1" step="0.01" placeholder="Cantidad" style="flex:1;">
+            <select id="unidadCapacidad" style="width:120px;">
+              <option value="">Unidad</option>
+              <option value="Kg.">Kg.</option>
+              <option value="L.">L.</option>
+              <option value="Lb.">Lb.</option>
+              <option value="Gal.">Gal.</option>
+              <option value="ml.">ml.</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Ubicación</label>
+          <input id="ubicacion" type="text">
+        </div>
+
+        <div class="field">
+          <label>Referencia</label>
+          <input id="referencia" type="text">
+        </div>
+
+        <div class="field">
+          <label>Zona de riesgo de incendio</label>
+          <select id="zonaRiesgo">
+            <option value="">Seleccione</option>
+            <option>Alta</option>
+            <option>Media</option>
+            <option>Baja</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>Fecha de Carga</label>
+          <input id="fechaCarga" type="date">
+        </div>
+
+        <div class="field">
+          <label>Prueba Hidrostática</label>
+          <input id="pruebaHidrostatica" type="date">
+        </div>
+
+        <div class="field" style="grid-column:span 2;">
+          <label>Observaciones del Inspector</label>
+          <textarea id="observaciones"></textarea>
+          <input type="file" id="imagenObservacion" accept="image/*" multiple style="margin-top:8px;">
+          <button type="button" class="mini-btn danger" style="margin-top:8px;" onclick="eliminarImagenesActuales()">🗑️ Eliminar imágenes</button>
+        </div>
+
+      </div>
+
+      <div class="field" style="margin-top:16px;">
+        <label>Procedimiento de inspección</label>
+        <div class="anomalias-grid" id="anomaliasGrid"></div>
+        <button type="button" class="action primary" onclick="agregarAnomalia()">➕ Agregar criterio</button>
+      </div>
+
+    </div>
+
+    <h3 class="section-title">Inventario registrado</h3>
+
+    <div class="table-wrap">
+      <table id="tablaInspeccion">
+        <thead>
+          <tr>
+            <th rowspan="2">N°</th>
+            <th colspan="2">Agente Extinguidor</th>
+            <th rowspan="2">Capacidad</th>
+            <th rowspan="2">Ubicación</th>
+            <th rowspan="2">Referencia</th>
+            <th rowspan="2">Zona Riesgo</th>
+            <th colspan="2">Mantenimiento</th>
+            <th colspan="20">Inspección de Anomalías</th>
+            <th rowspan="2">Detalles NC</th>
+            <th rowspan="2">Prioridad</th>
+            <th rowspan="2">Observaciones</th>
+            <th rowspan="2">Acciones</th>
+          </tr>
+          <tr>
+            <th class="sub">N° de EEP</th>
+            <th class="sub">Tipo de Agente</th>
+            <th class="sub">Fecha de Carga</th>
+            <th class="sub">Prueba Hidrostática</th>
+            <th class="sub">1</th><th class="sub">2</th><th class="sub">3</th><th class="sub">4</th>
+            <th class="sub">5</th><th class="sub">6</th><th class="sub">7</th><th class="sub">8</th>
+            <th class="sub">9</th><th class="sub">10</th><th class="sub">11</th><th class="sub">12</th>
+            <th class="sub">13</th><th class="sub">14</th><th class="sub">15</th><th class="sub">16</th>
+            <th class="sub">17</th><th class="sub">18</th><th class="sub">19</th><th class="sub">20</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <!-- TAB DASHBOARD -->
+  <div id="tab-dashboard" class="tab-content">
+    <div class="dashboard-grid">
+      <div class="card kpi">
+        <h3>% Conformes</h3>
+        <div id="semaforo" class="semaphore red">0%</div>
+        <div id="kpiConforme" class="value">0%</div>
+      </div>
+      <div class="card kpi">
+        <h3>Total de registros</h3>
+        <div id="kpiTotal" class="value">0</div>
+      </div>
+      <div class="card">
+        <h3 style="margin-bottom:12px;color:#1e3c72;">Distribución conformidad</h3>
+        <canvas id="chartEstados" height="220"></canvas>
+      </div>
+      <div class="card">
+        <h3 style="margin-bottom:12px;color:#1e3c72;">Top anomalías</h3>
+        <canvas id="chartAnomalias" height="220"></canvas>
+      </div>
+      <div class="card">
+        <h3 style="margin-bottom:12px;color:#1e3c72;">Prioridad de anomalías</h3>
+        <canvas id="chartPrioridades" height="220"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB INFORME -->
+  <div id="tab-informe" class="tab-content">
+
+  <div class="toolbar">
+    <button class="action danger" onclick="descargarPDF()">
+      📄 Descargar PDF
+    </button>
+  </div>
+
+  <div class="report-section" id="contenidoInforme"></div>
+
+</div>
+
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/sheets.js"></script>
+<script src="js/app.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+</body>
+</html>
