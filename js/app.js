@@ -469,20 +469,7 @@ async function actualizarInforme() {
       `;
       return;
     }
-
-    // Detectar si estamos en GitHub Pages
-    const esGitHubPages = window.location.hostname.includes('github.io');
-    let rutaLogo;
-
-    if (esGitHubPages) {
-      // En GitHub Pages, usar ruta absoluta desde la raíz del repo
-      rutaLogo = '/inspecci-n-extintores/assets/clientes/105/LOGO SDB.png';
-    } else {
-      // En local, usar ruta relativa
-      rutaLogo = 'assets/clientes/105/LOGO SDB.png';
-    }
-
-    const logoBase64 = await logoABase64(rutaLogo);
+    const logoBase64 = await logoABase64("assets/clientes/105/LOGO SDB.png");
 
     // ── Encabezado institucional (se repite en cada hoja) ──
   const encabezadoHTML = `
