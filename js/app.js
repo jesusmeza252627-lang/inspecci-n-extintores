@@ -47,7 +47,7 @@ function agregarAnomalia(valor = { codigo: "", prioridad: "Pendiente" }) {
   div.className = "anomalia-item";
   div.innerHTML = `
     <div>
-      <label>Anomalía / NC</label>
+      <label>Anomalía / No Conformidad</label>
       <select class="codigo">
         <option value="">Seleccione</option>
         ${Object.entries(detalleNC).map(([key, val]) =>
@@ -56,7 +56,7 @@ function agregarAnomalia(valor = { codigo: "", prioridad: "Pendiente" }) {
       </select>
     </div>
     <div>
-      <label>Nivel de prioridad</label>
+      <label>Nivel de prioridad: AC/OM</label>
       <select class="prioridad">
         <option value="Urgente">Urgente</option>
         <option value="Importante">Importante</option>
@@ -260,6 +260,8 @@ function validarFormulario(reg) {
 }
 
 function limpiarFormulario() {
+  editId = null; 
+  eliminarImagenes = false; 
   document.getElementById("tipoAgente").value = "";
   document.getElementById("numeroExtintor").value = "";
   document.getElementById("capacidad").value = "";
@@ -482,37 +484,13 @@ async function actualizarInforme() {
   // Detectar si estamos en GitHub Pages
   const esGitHubPages = window.location.hostname.includes('github.io');
   const rutaLogo = esGitHubPages 
-      ? '/inspecci-n-extintores/assets/clientes/105/LOGO SDB.png'
-      : 'assets/clientes/105/LOGO SDB.png';
+      ? '/inspecci-n-extintores/assets/clientes/100/Siviack_logo.png'
+      : 'assets/clientes/100/Siviack_logo.png';
   const logoBase64 = await logoABase64(rutaLogo);
     // ── Encabezado institucional (se repite en cada hoja) ──
-  const encabezadoHTML = `
-      <table style="width:100%;border-collapse:collapse;margin-bottom:16px;font-size:11px;">
-        <tr>
-          <td rowspan="3" style="border:1px solid #000;width:110px;text-align:center;vertical-align:middle;padding:4px;">
-            ${logoBase64 ? `<img src="${logoBase64}" style="width:90px;height:auto;">` : ""}
-          </td>
-          <td colspan="4" style="border:1px solid #000;text-align:center;font-weight:bold;padding:6px;font-size:12px;">
-            SISTEMA DE GESTIÓN DE SEGURIDAD Y SALUD EN EL TRABAJO
-          </td>
-          <td rowspan="3" style="border:1px solid #000;width:130px;text-align:center;vertical-align:middle;padding:4px;">
-           ${logoBase64 ? `<img src="${logoBase64}" style="width:90px;height:auto;">` : ""}
-          </td>
-        </tr>
-        <tr>
-          <td colspan="4" style="border:1px solid #000;text-align:center;vertical-align:middle;padding:6px;font-size:15px;height:70px;">
-            Informe de Inspección de Extintores
-          </td>
-        </tr>
-        <tr>
-          <td style="border:1px solid #000;padding:5px;text-align:center;width:25%;"><strong>Versión:</strong> 01</td>
-          <td style="border:1px solid #000;padding:5px;text-align:center;width:25%;"><strong>A:</strong> ${fechaInspeccion}</td>
-          <td style="border:1px solid #000;padding:5px;text-align:center;width:25%;"><strong>Cód.:</strong> IN-SG-SST-SVG-DG-02</td>
-        </tr>
-      </table>
-    `;
 
-    // ── Función para generar tabla de cada registro ──
+
+      // ── Función para generar tabla de cada registro ──
     function tablaRegistro(r, numRegistro) {
       const conforme = esConforme(r);
       const xConforme = conforme ? "X" : "";
@@ -614,7 +592,72 @@ async function actualizarInforme() {
     const numeroPaginas = Math.ceil(registros.length / registrosPorPagina);
     let informeHTML = "";
 
-    for (let pagina = 0; pagina < numeroPaginas; pagina++) {
+   
+  for (let pagina = 0; pagina < numeroPaginas; pagina++) {
+      const encabezadoHTML = `
+      <table style="width:100%;border-collapse:collapse;margin-bottom:16px;font-size:11px;">
+
+      <tr>
+          <td rowspan="3" style="border:1px solid #000;width:180px;padding:0;vertical-align:top;">
+            ${logoBase64 ? `
+              <img src="${logoBase64}"
+                  style="width:100%;height:100%;object-fit:contain;display:block;">
+            ` : ""}
+          </td>
+          <td colspan="4" style="border:1px solid #000; padding:0; height:70px; position:relative;">
+            
+            <div style="position:absolute; top:5px; left:5px; font-size:12px;">
+              ESTANDAR:
+            </div>
+
+            <div style="height:70px; display:flex; justify-content:center; align-items:center; text-align:center; font-size:15px;">
+              Informe de Equipos de Extintores Portátiles
+            </div>
+
+          </td>
+              <td rowspan="3" style="width:180px;padding:0;vertical-align:top;border:1px solid #000;background:#fff;">
+              <table style="width:100%;height:100%;border-collapse:collapse;border-spacing:0;margin:0;background:#fff;">
+              <tr>
+                <td colspan="2" style="border-bottom:1.5px solid #000;text-align:center;padding:4px;box-sizing:border-box;">
+                  SISTEMAS VITALES DE GESTIÓN 
+                </td>
+              </tr>
+
+              <tr>
+                <td colspan="2" style="border-bottom:1.5px solid #000;text-align:center;padding:4px;box-sizing:border-box;">
+                  <strong>Cód.:</strong> IN-SG-SST-SVG-DG-02
+                </td>
+              </tr>
+
+              <tr>
+                <td style="border-right:1px solid #000;border-bottom:1px solid #000;text-align:center;padding:4px;box-sizing:border-box;">
+                  <strong>Versión:</strong> 01
+                </td>
+                <td style="border-bottom:1px solid #000;text-align:center;padding:4px;box-sizing:border-box;">
+                  <strong>Revisión:</strong> 01
+                </td>
+              </tr>
+
+              <tr>
+                <td style="border-right:1px solid #000;text-align:center;padding:4px;box-sizing:border-box;">
+                 <strong>A:</strong> ${fechaInspeccion}
+                </td>
+                <td style="text-align:center;padding:4px;box-sizing:border-box;">
+                  Pág. ${pagina + 1} / ${numeroPaginas}
+                </td>
+              </tr>
+
+            </table>
+
+          </td>
+        </tr>
+
+
+
+      </table>
+    `;
+
+
       const inicio = pagina * registrosPorPagina;
       const registrosPagina = registros.slice(inicio, inicio + registrosPorPagina);
 
@@ -656,8 +699,7 @@ async function actualizarInforme() {
           </div>
         </div>
       `;
-    }
-
+  }
     document.getElementById("contenidoInforme").innerHTML = informeHTML;
 }
 // ── Exportar Excel ──

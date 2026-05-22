@@ -12,8 +12,8 @@
 <div class="container">
 
   <div class="header">
-    <h1>🧯 Módulo de Inspección de Extintores Portátiles</h1>
-    <p>Registro, control e inspección de extintores.</p>
+    <h1>MÓDULO DE INSPECCIÓN DE EQUIPOS DE SEGURIDAD</h1>
+    <h2>Inspección de Equipos de Extintores Portátitles</h2>
     <div id="syncStatus" class="sync-status">⬜ Sin cambios</div>
   </div>
 
@@ -48,21 +48,15 @@
     </div>
 
     <div class="card field">
+      <label>Fecha de inspección</label>
+      <input id="fechaInspeccion" type="date">
+    </div>
+    
+    <div class="card field">
       <label>Código de formato</label>
       <input id="codigoFormato" type="text" value="FO-SG-SST-ADM-DG-19">
     </div>
 
-    <div class="card field">
-      <label>Fecha de inspección</label>
-      <input id="fechaInspeccion" type="date">
-    </div>
-
-  </div>
-
-  <div class="tabs">
-    <button class="tab-btn active" onclick="switchTab('inspeccion',this)">📋 Inspección</button>
-    <button class="tab-btn" onclick="switchTab('dashboard',this)">📊 Dashboard</button>
-    <button class="tab-btn" onclick="switchTab('informe',this)">📄 Informe</button>
   </div>
 
   <!-- TAB INSPECCIÓN -->
@@ -74,6 +68,12 @@
       <button class="action secondary" onclick="limpiarFormulario()">🧹 Limpiar</button>
       <button class="action warning" onclick="exportarExcel()">📥 Exportar a Excel</button>
       <button class="action primary" onclick="sincronizarDesdeSheets()" title="Recargar datos desde Google Sheets">🔄 Recargar</button>
+    </div>
+    
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('inspeccion',this)">📋 Inspección</button>
+      <button class="tab-btn" onclick="switchTab('dashboard',this)">📊 Dashboard</button>
+      <button class="tab-btn" onclick="switchTab('informe',this)">📄 Informe</button>
     </div>
 
     <div class="card" style="margin-bottom:16px;">
@@ -90,6 +90,7 @@
           <select id="tipoAgente">
             <option value="">Seleccione</option>
             <option>PQS</option>
+            <option>CO2</option>
             <option>H2O-P</option>
             <option>H2O-DI</option>
             <option>ADP/PK</option>
@@ -142,19 +143,19 @@
           <input id="pruebaHidrostatica" type="date">
         </div>
 
-        <div class="field" style="grid-column:span 2;">
-          <label>Observaciones del Inspector</label>
-          <textarea id="observaciones"></textarea>
-          <input type="file" id="imagenObservacion" accept="image/*" multiple style="margin-top:8px;">
-          <button type="button" class="mini-btn danger" style="margin-top:8px;" onclick="eliminarImagenesActuales()">🗑️ Eliminar imágenes</button>
-        </div>
-
       </div>
 
       <div class="field" style="margin-top:16px;">
         <label>Procedimiento de inspección</label>
         <div class="anomalias-grid" id="anomaliasGrid"></div>
         <button type="button" class="action primary" onclick="agregarAnomalia()">➕ Agregar criterio</button>
+      </div>
+    
+      <div class="field" style="grid-column:span 2; margin-top: 24px;">
+        <label>Observaciones del Inspector</label>
+        <textarea id="observaciones"></textarea>
+        <input type="file" id="imagenObservacion" accept="image/*" multiple style="margin-top:8px;">
+        <button type="button" class="mini-btn danger" style="margin-top:8px;" onclick="eliminarImagenesActuales()">🗑️ Eliminar imágenes</button>
       </div>
 
     </div>
