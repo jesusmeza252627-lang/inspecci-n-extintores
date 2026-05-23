@@ -421,7 +421,7 @@ function renderTabla() {
       <td class="left">${obtenerDetallesNC(r) || "Sin NC"}</td>
       <td>${obtenerPrioridades(r) || "-"}</td>
       <td class="left">
-        ${r.observaciones(r.observaciones)}
+        ${formatearObservaciones(r.observaciones)}
         <div class="thumbs">${(r.imagenes || []).map(img => `<img src="${img}">`).join("")}</div>
       </td>
       <td>
