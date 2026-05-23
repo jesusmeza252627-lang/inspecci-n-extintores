@@ -111,6 +111,38 @@ function obtenerDescripcionNC(reg, html = false) {
   if (html) return `<ul style="padding-left:18px;margin:0;">${detalles.join("")}</ul>`;
   return detalles.map(x => x.replace(/<[^>]*>/g, "")).join(" | ");
 }
+function formatearObservaciones(obs) {
+  if (!obs || obs.trim() === "") return "-";
+
+  const items = obs
+    .split("\n")
+    .map(x => x.trim())
+    .filter(x => x !== "");
+
+  return `
+    <ol style="margin:0;padding-left:18px;">
+      ${items.map(x => `<li>${x}</li>`).join("")}
+    </ol>
+  `;
+}
+function iniciarNumeracion() {
+  const txt = document.getElementById("observaciones");
+
+  if (txt.value.trim() === "") {
+    txt.value = "1. ";
+  }
+}
+
+function numerarObservaciones(e) {
+  if (e.key === "Enter") {
+    e.preventDefault();
+
+    const txt = e.target;
+    const lineas = txt.value.split("\n").filter(x => x.trim() !== "");
+
+    txt.value += "\n" + (lineas.length + 1) + ". ";
+  }
+}
 
 async function filesToDataUrls(files) {
   const arr = Array.from(files || []);
@@ -333,18 +365,36 @@ async function eliminarRegistro(id) {
 
 // ── Render Tabla ──
 function okNc(flag) { return flag ? "✖" : "✔"; }
-
 function obtenerPrioridades(reg) {
   const prioridades = [];
+
   for (let i = 1; i <= 20; i++) {
     if (reg["a" + i]) {
+
       const prioridad = reg["p" + i] || "Pendiente";
-      let clase = "badge-pendiente";
-      if (prioridad === "Urgente") clase = "badge-urgente";
-      if (prioridad === "Importante") clase = "badge-importante";
-      prioridades.push(`<div style="margin-bottom:4px;"><span class="badge ${clase}">A${i} - ${prioridad}</span></div>`);
+
+      let color = "#16a34a";
+
+      if (prioridad === "Urgente") color = "#dc2626";
+      if (prioridad === "Importante") color = "#f59e0b";
+
+      prioridades.push(`
+        <div style="margin-bottom:4px;">
+          <span style="
+            background:${color};
+            color:#fff;
+            padding:4px 8px;
+            border-radius:12px;
+            font-weight:bold;
+            display:inline-block;
+          ">
+            A${i} - ${prioridad}
+          </span>
+        </div>
+      `);
     }
   }
+
   return prioridades.join("");
 }
 
@@ -371,7 +421,7 @@ function renderTabla() {
       <td class="left">${obtenerDetallesNC(r) || "Sin NC"}</td>
       <td>${obtenerPrioridades(r) || "-"}</td>
       <td class="left">
-        ${r.observaciones}
+        ${r.observaciones(r.observaciones)}
         <div class="thumbs">${(r.imagenes || []).map(img => `<img src="${img}">`).join("")}</div>
       </td>
       <td>
@@ -532,53 +582,110 @@ async function actualizarInforme() {
           </table>
 
           <!-- TABLA 2: Datos del extintor (con pequeño espacio arriba) -->
-          <table style="width:100%;border-collapse:collapse;font-size:10px;margin-top:8px;margin-bottom:20px;">
-
+          <table style="width:100%;border-collapse:collapse;font-size:10px;margin-top:8px;margin-bottom:20px;table-layout:fixed;">
             <tr style="background:#d9d9d9;">
-              <td style="border:1px solid #000;padding:5px;text-align:center;font-weight:bold;">Fecha de Inspección</td>
-              <td style="border:1px solid #000;padding:5px;text-align:center;font-weight:bold;">N° de EEP</td>
-              <td style="border:1px solid #000;padding:5px;text-align:center;font-weight:bold;">Tipo de Agente</td>
-              <td style="border:1px solid #000;padding:5px;text-align:center;font-weight:bold;">Cap.</td>
-              <td style="border:1px solid #000;padding:5px;text-align:center;font-weight:bold;">Fecha Carga</td>
-              <td style="border:1px solid #000;padding:5px;text-align:center;font-weight:bold;">Fecha PH</td>
-            </tr>
-            <tr>
-              <td style="border:1px solid #000;padding:5px;text-align:center;">${formatearFecha(r.fecha)}</td>
-              <td style="border:1px solid #000;padding:5px;text-align:center;">${r.numeroExtintor || "-"}</td>
-              <td style="border:1px solid #000;padding:5px;text-align:center;">${r.tipoAgente || "-"}</td>
-              <td style="border:1px solid #000;padding:5px;text-align:center;">${r.capacidad || "-"}</td>
-              <td style="border:1px solid #000;padding:5px;text-align:center;">${formatearFecha(r.fechaCarga)}</td>
-              <td style="border:1px solid #000;padding:5px;text-align:center;">${formatearFecha(r.pruebaHidrostatica)}</td>
-            </tr>
-
-            <tr style="background:#d9d9d9;">
-              <td colspan="3" style="border:1px solid #000;padding:5px;text-align:center;font-weight:bold;">Ubicación</td>
-              <td colspan="3" style="border:1px solid #000;padding:5px;text-align:center;font-weight:bold;">Referencia</td>
-            </tr>
-            <tr>
-              <td colspan="3" style="border:1px solid #000;padding:5px;">${r.ubicacion || "-"}</td>
-              <td colspan="3" style="border:1px solid #000;padding:5px;">${r.referencia || "-"}</td>
-            </tr>
-
-            <tr style="background:#d9d9d9;">
-              <td colspan="2" style="border:1px solid #000;padding:5px;text-align:center;font-weight:bold;">Anomalías / NC</td>
-              <td colspan="2" style="border:1px solid #000;padding:5px;text-align:center;font-weight:bold;">Prioridad</td>
-              <td colspan="2" style="border:1px solid #000;padding:5px;text-align:center;font-weight:bold;">Observaciones</td>
-            </tr>
-            <tr>
-              <td colspan="2" style="border:1px solid #000;padding:5px;vertical-align:top;text-align:right">
-                ${obtenerDescripcionNC(r, true)}
+              <td style="border:1px solid #000;padding:5px;text-align:center;font-weight:bold;width:16.67%;">
+                Fecha de Inspección
               </td>
-              <td colspan="2" style="border:1px solid #000;padding:5px;vertical-align:top;">
-                ${obtenerPrioridades(r) || "-"}
+              <td style="border:1px solid #000;padding:5px;text-align:center;font-weight:bold;width:16.67%;">
+                N° de EEP
               </td>
-              <td colspan="2" style="border:1px solid #000;padding:5px;vertical-align:top;">
-                ${r.observaciones || "-"}
+              <td style="border:1px solid #000;padding:5px;text-align:center;font-weight:bold;width:16.67%;">
+                Tipo de Agente
+              </td>
+              <td style="border:1px solid #000;padding:5px;text-align:center;font-weight:bold;width:16.67%;">
+                Cap.
+              </td>
+              <td style="border:1px solid #000;padding:5px;text-align:center;font-weight:bold;width:16.67%;">
+                Fecha Carga
+              </td>
+              <td style="border:1px solid #000;padding:5px;text-align:center;font-weight:bold;width:16.67%;">
+                Fecha PH
+              </td>
+            </tr>
+
+            <tr>
+              <td style="border:1px solid #000;padding:5px;text-align:center;width:16.67%;">
+                ${formatearFecha(r.fecha)}
+              </td>
+              <td style="border:1px solid #000;padding:5px;text-align:center;width:16.67%;">
+                ${r.numeroExtintor || "-"}
+              </td>
+              <td style="border:1px solid #000;padding:5px;text-align:center;width:16.67%;">
+                ${r.tipoAgente || "-"}
+              </td>
+              <td style="border:1px solid #000;padding:5px;text-align:center;width:16.67%;">
+                ${r.capacidad || "-"}
+              </td>
+              <td style="border:1px solid #000;padding:5px;text-align:center;width:16.67%;">
+                ${formatearFecha(r.fechaCarga)}
+              </td>
+              <td style="border:1px solid #000;padding:5px;text-align:center;width:16.67%;">
+                ${formatearFecha(r.pruebaHidrostatica)}
+              </td>
+            </tr>
+            
+            <tr style="background:#d9d9d9;">
+              <td colspan="3"
+                  style="border:1px solid #000;padding:5px;text-align:center;font-weight:bold;width:50%;">
+                  Ubicación
+              </td>
+
+              <td colspan="3"
+                  style="border:1px solid #000;padding:5px;text-align:center;font-weight:bold;width:50%;">
+                  Referencia
+              </td>
+            </tr>
+
+            <tr>
+              <td colspan="3"
+                  style="border:1px solid #000;padding:5px;width:50%;">
+                  ${r.ubicacion || "-"}
+              </td>
+
+              <td colspan="3"
+                  style="border:1px solid #000;padding:5px;width:50%;">
+                  ${r.referencia || "-"}
+              </td>
+            </tr>
+            <tr style="background:#d9d9d9;">
+              <td colspan="2"
+                  style="border:1px solid #000;padding:5px;text-align:center;font-weight:bold;">
+                  Anomalías / NC
+              </td>
+
+              <td colspan="1"
+                  style="border:1px solid #000;padding:5px;text-align:center;font-weight:bold;">
+                  Prioridad
+              </td>
+
+              <td colspan="3"
+                  style="border:1px solid #000;padding:5px;text-align:center;font-weight:bold;">
+                  Observaciones
+              </td>
+            </tr>
+
+            <tr>
+              <td colspan="2"
+                  style="border:1px solid #000;padding:5px;vertical-align:top;text-align:left;">
+                  ${obtenerDescripcionNC(r, true)}
+              </td>
+
+              <td colspan="1"
+                  style="border:1px solid #000;padding:5px;vertical-align:top;">
+                  ${obtenerPrioridades(r) || "-"}
+              </td>
+
+              <td colspan="3" style="border:1px solid #000;padding:5px;vertical-align:top;text-align:left;">
+                
+                ${formatearObservaciones(r.observaciones)}
+
                 <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:4px;">
                   ${(r.imagenes || []).map(img =>
                     `<img src="${img}" style="width:90px;height:90px;object-fit:cover;border-radius:6px;border:1px solid #ccc;">`
                   ).join("")}
                 </div>
+
               </td>
             </tr>
 
@@ -598,7 +705,7 @@ async function actualizarInforme() {
       <table style="width:100%;border-collapse:collapse;margin-bottom:16px;font-size:11px;">
 
       <tr>
-          <td rowspan="3" style="border:1px solid #000;width:180px;padding:0;vertical-align:top;">
+          <td rowspan="3" style="border:1px solid #000;width:180px;padding:0;vertical-align:middle;">
             ${logoBase64 ? `
               <img src="${logoBase64}"
                   style="width:100%;height:100%;object-fit:contain;display:block;">
@@ -666,20 +773,20 @@ async function actualizarInforme() {
           <h3 style="color:#1e3c72;margin-bottom:8px;">Resumen ejecutivo</h3>
           <table style="width:100%;border-collapse:collapse;font-size:11px;">
             <tr style="background:#f0f0f0;">
-              <th style="border:1px solid #ccc;padding:6px;text-align:left;">Total inspeccionados</th>
-              <td style="border:1px solid #ccc;padding:6px;"><strong>${total}</strong></td>
+              <th style="border:1px solid #000000;padding:6px;text-align:left;color:#000000;">Total inspeccionados</th>
+              <td style="border:1px solid #000000;padding:6px;"><strong>${total}</strong></td>
             </tr>
             <tr>
-              <th style="border:1px solid #ccc;padding:6px;text-align:left;">Conformes</th>
-              <td style="border:1px solid #ccc;padding:6px;"><strong style="color:green;">${conformes}</strong></td>
+              <th style="border:1px solid #000000;padding:6px;text-align:left;color:#000000;">Conformes</th>
+              <td style="border:1px solid #000000;padding:6px;"><strong style="color:green;">${conformes}</strong></td>
             </tr>
             <tr>
-              <th style="border:1px solid #ccc;padding:6px;text-align:left;">Con anomalías</th>
-              <td style="border:1px solid #ccc;padding:6px;"><strong style="color:#d97706;">${observados}</strong></td>
+              <th style="border:1px solid #000000;padding:6px;text-align:left;color:#000000;">Con anomalías</th>
+              <td style="border:1px solid #000000;padding:6px;"><strong style="color:#d97706;">${observados}</strong></td>
             </tr>
             <tr>
-              <th style="border:1px solid #ccc;padding:6px;text-align:left;">% Conformidad</th>
-              <td style="border:1px solid #ccc;padding:6px;"><strong>${total > 0 ? Math.round((conformes/total)*100) : 0}%</strong></td>
+              <th style="border:1px solid #000000;padding:6px;text-align:left;color:#000000;">% Conformidad</th>
+              <td style="border:1px solid #000000;padding:6px;"><strong>${total > 0 ? Math.round((conformes/total)*100) : 0}%</strong></td>
             </tr>
           </table>
         </div>

@@ -67,15 +67,15 @@ body{
 button.action,.mini-btn{border:none;border-radius:10px;padding:11px 16px;cursor:pointer;font-weight:bold;color:white;}
 .mini-btn{padding:7px 10px;}
 .primary{background:#1e3c72;}
-.success{background:#28a745;}
+.success{background:#1c7a32;}
 .danger{background:#dc3545;}
-.secondary{background:#6b7280;}
+.secondary{background:#464a52;}
 .warning{background:#d97706;}
 
 /* ── Anomalías ── */
 .anomalias-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin-top:6px;margin-bottom:12px;}
 .anomalia-item{
-  background:#f8fafc;border:1px solid #e5e7eb;border-radius:10px;
+  background:#accbe9;border:1px solid #aac0ec;border-radius:10px;
   padding:10px;font-size:.88rem;line-height:1.35;
   display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end;
 }
@@ -98,6 +98,7 @@ button.action,.mini-btn{border:none;border-radius:10px;padding:11px 16px;cursor:
   border-collapse:collapse;
   min-width:3200px;
   font-size:.84rem;
+  table-layout:fixed;
 }
 .report-table{
   width:100%;
@@ -168,7 +169,7 @@ td.left{text-align:left;}
 }
 .report-section h2,.report-section h3{color:#1e3c72;margin-bottom:10px;}
 .report-section p{margin-bottom:8px;}
-.section-title{color:#1e3c72;margin-bottom:10px;font-size:1.05rem;}
+.section-title{color:#fdfdfd;margin-bottom:10px;font-size:1.05rem;}
 .bloque-inspeccion{margin-bottom:50px;padding-bottom:30px;border-bottom:2px solid #d1d5db;}
 
 .descripcion-previa{

@@ -16,66 +16,57 @@
     <h2>Inspección de Equipos de Extintores Portátitles</h2>
     <div id="syncStatus" class="sync-status">⬜ Sin cambios</div>
   </div>
-
-  <div class="meta-grid">
-
-    <div class="card field">
-      <label>Código - SHK</label>
-      <select id="codigoSHK" onchange="autocompletarCliente()">
-        <option value="">Seleccione código</option>
-        <option value="100">100</option>
-        <option value="101">101</option>
-        <option value="102">102</option>
-        <option value="103">103</option>
-        <option value="104">104</option>
-        <option value="105">105</option>
-        <option value="106">106</option>
-        <option value="107">107</option>
-        <option value="108">108</option>
-        <option value="109">109</option>
-        <option value="110">110</option>
-      </select>
-    </div>
-
-    <div class="card field">
-      <label>Cliente</label>
-      <input id="cliente" type="text" readonly placeholder="Se completa automáticamente">
-    </div>
-
-    <div class="card field">
-      <label>Sede / Proceso</label>
-      <input id="Sede" type="text">
-    </div>
-
-    <div class="card field">
-      <label>Fecha de inspección</label>
-      <input id="fechaInspeccion" type="date">
-    </div>
     
-    <div class="card field">
-      <label>Código de formato</label>
-      <input id="codigoFormato" type="text" value="FO-SG-SST-ADM-DG-19">
-    </div>
-
-  </div>
-
-  <!-- TAB INSPECCIÓN -->
-  <div id="tab-inspeccion" class="tab-content active">
-
     <div class="toolbar">
-      <button class="action success" onclick="nuevoRegistro()">➕ Agregar registro</button>
-      <button class="action primary" onclick="guardarRegistro()">💾 Guardar</button>
-      <button class="action secondary" onclick="limpiarFormulario()">🧹 Limpiar</button>
-      <button class="action warning" onclick="exportarExcel()">📥 Exportar a Excel</button>
-      <button class="action primary" onclick="sincronizarDesdeSheets()" title="Recargar datos desde Google Sheets">🔄 Recargar</button>
-    </div>
-    
-    <div class="tabs">
       <button class="tab-btn active" onclick="switchTab('inspeccion',this)">📋 Inspección</button>
       <button class="tab-btn" onclick="switchTab('dashboard',this)">📊 Dashboard</button>
       <button class="tab-btn" onclick="switchTab('informe',this)">📄 Informe</button>
     </div>
 
+
+  <!-- TAB INSPECCIÓN -->
+  <div id="tab-inspeccion" class="tab-content active">  
+
+    <div class="meta-grid">
+      <div class="card field">
+        <label>Código - SHK</label>
+        <select id="codigoSHK" onchange="autocompletarCliente()">
+          <option value="">Seleccione código</option>
+          <option value="100">100</option>
+          <option value="101">101</option>
+          <option value="102">102</option>
+          <option value="103">103</option>
+          <option value="104">104</option>
+          <option value="105">105</option>
+          <option value="106">106</option>
+          <option value="107">107</option>
+          <option value="108">108</option>
+          <option value="109">109</option>
+          <option value="110">110</option>
+        </select>
+      </div>
+
+      <div class="card field">
+        <label>Cliente</label>
+        <input id="cliente" type="text" readonly placeholder="Se completa automáticamente">
+      </div>
+
+      <div class="card field">
+        <label>Sede / Proceso</label>
+        <input id="Sede" type="text">
+      </div>
+
+      <div class="card field">
+        <label>Fecha de inspección</label>
+        <input id="fechaInspeccion" type="date">
+      </div>
+      
+      <div class="card field">
+        <label>Código de formato</label>
+        <input id="codigoFormato" type="text" value="FO-SG-SST-ADM-DG-19">
+      </div>
+
+    </div>
     <div class="card" style="margin-bottom:16px;">
 
       <div class="form-grid">
@@ -153,17 +144,50 @@
     
       <div class="field" style="grid-column:span 2; margin-top: 24px;">
         <label>Observaciones del Inspector</label>
-        <textarea id="observaciones"></textarea>
+        <textarea
+          id="observaciones"
+          onfocus="iniciarNumeracion()"
+          onkeydown="numerarObservaciones(event)">
+        </textarea>
         <input type="file" id="imagenObservacion" accept="image/*" multiple style="margin-top:8px;">
         <button type="button" class="mini-btn danger" style="margin-top:8px;" onclick="eliminarImagenesActuales()">🗑️ Eliminar imágenes</button>
       </div>
 
     </div>
 
+    <div class="toolbar">
+      <button class="action success" onclick="nuevoRegistro()">➕ Agregar registro</button>
+      <button class="action primary" onclick="guardarRegistro()">💾 Guardar</button>
+      <button class="action secondary" onclick="limpiarFormulario()">🧹 Limpiar</button>
+      <button class="action warning" onclick="exportarExcel()">📥 Exportar a Excel</button>
+      <button class="action primary" onclick="sincronizarDesdeSheets()" title="Recargar datos desde Google Sheets">🔄 Recargar</button>
+    </div>
+
     <h3 class="section-title">Inventario registrado</h3>
 
     <div class="table-wrap">
       <table id="tablaInspeccion">
+        <colgroup>
+          <col style="width:50px;">   <!-- N° -->
+          <col style="width:120px;">  <!-- Agente -->
+          <col style="width:120px;">  <!-- Tipo -->
+          <col style="width:90px;">   <!-- Capacidad -->
+          <col style="width:180px;">  <!-- Ubicación -->
+          <col style="width:180px;">  <!-- Referencia -->
+          <col style="width:120px;">  <!-- Zona Riesgo -->
+          <col style="width:100px;">  <!-- Fecha Carga -->
+          <col style="width:100px;">  <!-- PH -->
+
+          <!-- 20 anomalías -->
+          <col span="20" style="width:55px;">
+
+          <col style="width:250px;">  <!-- Detalles NC -->
+          <col style="width:180px;">  <!-- Prioridad -->
+          <col style="width:350px;">  <!-- Observaciones -->
+          <col style="width:100px;">  <!-- Acciones -->
+        </colgroup>
+        
+        
         <thead>
           <tr>
             <th rowspan="2">N°</th>
