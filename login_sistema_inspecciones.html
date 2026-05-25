@@ -229,9 +229,10 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:var(--gris-fondo);min-he
 }
 
 @media (max-width: 480px) {
-  .login-card {
-    padding: 28px 20px;    /* ← más padding */
-    width: 95vw;           /* ← casi toda la pantalla */
+  .login-card{
+    background:white;border-radius:20px;padding:32px 28px;
+    width:90vw;max-width:500px;
+    box-shadow:0 20px 60px rgba(0,0,0,.25);
   }
   
   .login-escudo {
@@ -244,6 +245,24 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:var(--gris-fondo);min-he
   }
 }
 
+/* Hacer login más grande en celular */
+@media (max-width: 600px) {
+  .login-card {
+    width: 95vw;
+    padding: 40px 28px;
+  }
+  .login-logo h1 {
+    font-size: 1.3rem;
+  }
+  .login-field input {
+    padding: 14px 16px;
+    font-size: 16px;
+  }
+  .btn-login {
+    padding: 15px;
+    font-size: 1rem;
+  }
+}
 </style>
 
 <div class="notif" id="notif"></div>
