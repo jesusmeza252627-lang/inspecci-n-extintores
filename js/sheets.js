@@ -114,3 +114,63 @@ function localEliminar(id) {
   const todos = localObtenerTodos().filter(x => x.id !== id);
   localStorage.setItem(STORAGE_KEY, JSON.stringify(todos));
 }
+
+// Guardar inspección completa
+async function sheetsGuardarInspeccion(inspeccion) {
+  if (!sheetsEnabled()) {
+    localGuardarInspeccion(inspeccion);
+    return { status: "ok" };
+  }
+  
+  try {
+    const res = await fetch(CONFIG.APPS_SCRIPT_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain" },
+      body: JSON.stringify({ action: "guardarInspeccion", inspeccion })
+    });
+    const data = await res.json();
+    if (data.status === "ok") {
+      localGuardarInspeccion(inspeccion);
+    }
+    return data;
+  } catch (e) {
+    console.error("Error guardando inspección:", e);
+    localGuardarInspeccion(inspeccion);
+    return { status: "ok", _local: true };
+  }
+}
+
+// Obtener todas las inspecciones
+async function sheetsObtenerInspecciones() {
+  if (!sheetsEnabled()) return localObtenerInspecciones();
+  
+  try {
+    const url = `${CONFIG.APPS_SCRIPT_URL}?action=obtenerInspecciones`;
+    const resp = await fetch(url);
+    const data = await resp.json();
+    if (data.status === "ok") {
+      localStorage.setItem("inspecciones_historial", JSON.stringify(data.inspecciones));
+      return data.inspecciones;
+    }
+  } catch (e) {
+    console.error("Error obteniendo inspecciones:", e);
+  }
+  return localObtenerInspecciones();
+}
+
+// Capa local para inspecciones
+function localGuardarInspeccion(inspeccion) {
+  const inspecciones = localObtenerInspecciones();
+  const index = inspecciones.findIndex(i => i.id === inspeccion.id);
+  if (index === -1) inspecciones.push(inspeccion);
+  else inspecciones[index] = inspeccion;
+  localStorage.setItem("inspecciones_historial", JSON.stringify(inspecciones));
+}
+
+function localObtenerInspecciones() {
+  try {
+    return JSON.parse(localStorage.getItem("inspecciones_historial") || "[]");
+  } catch {
+    return [];
+  }
+}

@@ -11,10 +11,29 @@ let eliminarImagenes = false;
 
 // ── Inicialización ──
 async function init() {
-  const hoy = new Date();
-  document.getElementById("fechaInspeccion").value = hoy.toISOString().split("T")[0];
+  if (!cargarDatosSesion()) return; // Redirige si no hay sesión
   agregarAnomalia();
   await sincronizarDesdeSheets();
+}
+
+function cargarDatosSesion() {
+  const datos = localStorage.getItem("datosInspeccion");
+  if (!datos) {
+    console.warn("No hay datos de sesión. Redirigiendo al login...");
+    window.location.href = "login_sistema_inspecciones.html";
+    return false;
+  }
+
+  const sesion = JSON.parse(datos);
+  document.getElementById("codigoSHK").value = sesion.codigoSHK || "";
+  document.getElementById("cliente").value = sesion.cliente || "";
+  document.getElementById("Sede").value = sesion.sede || "";
+  document.getElementById("fechaInspeccion").value = sesion.fecha || "";
+  document.getElementById("codigoFormato").value = sesion.codigoFormato || "";
+
+  // Opcional: mostrar en algún lugar el inspector
+  console.log(`Inspector: ${sesion.nombre} (${sesion.rol})`);
+  return true;
 }
 
 async function sincronizarDesdeSheets() {
@@ -114,16 +133,28 @@ function obtenerDescripcionNC(reg, html = false) {
 function formatearObservaciones(obs) {
   if (!obs || obs.trim() === "") return "-";
 
-  const items = obs
-    .split("\n")
-    .map(x => x.trim())
-    .filter(x => x !== "");
+  // Dividir por líneas
+  let lineas = obs.split("\n").map(l => l.trim()).filter(l => l !== "");
 
+  // Limpiar numeración manual (1., 2., etc.) y viñetas (-, *, •)
+  lineas = lineas.map(linea => {
+    // Elimina patrones como "1. ", "2. ", "1) ", "2) ", "- ", "* ", "• "
+    return linea.replace(/^(\d+[\.\)]\s*|[\-\*\•]\s*)/, "");
+  });
+
+  // Generar HTML con lista ordenada
   return `
     <ol style="margin:0;padding-left:18px;">
-      ${items.map(x => `<li>${x}</li>`).join("")}
+      ${lineas.map(item => `<li>${escapeHtml(item)}</li>`).join("")}
     </ol>
   `;
+}
+
+// Función auxiliar para evitar XSS
+function escapeHtml(text) {
+  const div = document.createElement("div");
+  div.textContent = text;
+  return div.innerHTML;
 }
 function iniciarNumeracion() {
   const txt = document.getElementById("observaciones");
@@ -136,11 +167,19 @@ function iniciarNumeracion() {
 function numerarObservaciones(e) {
   if (e.key === "Enter") {
     e.preventDefault();
-
     const txt = e.target;
-    const lineas = txt.value.split("\n").filter(x => x.trim() !== "");
+    const cursorPos = txt.selectionStart;
+    const textBefore = txt.value.substring(0, cursorPos);
+    const textAfter = txt.value.substring(cursorPos);
+    txt.value = textBefore + "\n" + textAfter;
+    txt.selectionStart = txt.selectionEnd = cursorPos + 1;
+  }
+}
 
-    txt.value += "\n" + (lineas.length + 1) + ". ";
+function iniciarNumeracion() {
+  const txt = document.getElementById("observaciones");
+  if (txt.value.trim() === "") {
+    txt.value = ""; // Ya no ponemos "1. " automáticamente
   }
 }
 
@@ -321,58 +360,53 @@ function cambiarColorZona() {
 
 // ── GUARDAR ──
 async function guardarRegistro() {
-
+  if (inspeccionFinalizada) {
+    alert("⚠️ Esta inspección ya fue finalizada. No se pueden agregar más registros.");
+    return;
+  }
+  
   const reg = await getFormulario();
   if (!reg) return;
-
-    // 🔍 LOG A: ¿las imágenes llegan desde el formulario?
-  console.log("=== LOG A: imagenes en el formulario ===");
-  console.log("cantidad:", reg.imagenes?.length);
-  console.log("primer elemento (primeros 80 chars):", reg.imagenes?.[0]?.substring(0, 80));
-
-
+  
   if (!validarFormulario(reg)) {
     alert("Debe completar todos los campos.");
     return;
   }
-
-  console.log("IMAGENES QUE SE ENVIAN:");
-  console.log(reg.imagenes);
-
+  
+  // Agregar ID de inspección al registro
+  reg.idInspeccion = inspeccionActual.id;
+  
   const regGuardar = { ...reg };
-
   for (let i = 1; i <= 20; i++) {
     delete regGuardar["a" + i];
     delete regGuardar["p" + i];
   }
-
+  
   try {
     const res = await sheetsGuardar(regGuardar);
-
-    console.log("RESPUESTA BACKEND:", JSON.stringify(res));
-
-    if (!res || res.status === "error") {
-      alert("⚠️ Error Sheets — guardado local");
-      return;
-    }
-
-    // En guardarRegistro(), reemplazar líneas 229-231 por:
+    
     const regFinal = { ...reg };
     if (res.imagenes && res.imagenes.length > 0) {
-      regFinal.imagenes = res.imagenes; // URLs de Drive en vez de base64
+      regFinal.imagenes = res.imagenes;
     }
+    
     const idx = registros.findIndex(x => x.id === reg.id);
     if (idx === -1) registros.push(regFinal);
     else registros[idx] = regFinal;
-
+    
+    // Actualizar la inspección actual
+    inspeccionActual.registros = [...registros];
+    inspeccionActual.fechaModificacion = new Date().toISOString();
+    await sheetsGuardarInspeccion(inspeccionActual);
+    
     limpiarFormulario();
     renderTabla();
     actualizarDashboard();
     await actualizarInforme();
-
+    
   } catch (e) {
-    console.error("FALLA CON SHEETS:", e);
-    alert("⚠️ Error Sheets — guardado local");
+    console.error("Error al guardar:", e);
+    alert("⚠️ Error al guardar el registro");
   }
 }
 
@@ -502,8 +536,29 @@ function obtenerPrioridades(reg) {
 function renderTabla() {
   const tbody = document.querySelector("#tablaInspeccion tbody");
   tbody.innerHTML = "";
+  
   registros.forEach((r, i) => {
     const tr = document.createElement("tr");
+    
+    // Generar HTML de anomalías (A1 a A20)
+    let anomaliasHtml = "";
+    for (let a = 1; a <= 20; a++) {
+      const tieneAnomalia = r["a" + a];
+      anomaliasHtml += `
+        <td class="anomalia-cell"
+            data-registro="${r.id}"
+            data-anomalia="${a}"
+            style="text-align:center; cursor:pointer;"
+            onclick="toggleAnomaliaSeguimiento('${r.id}', ${a})">
+            ${tieneAnomalia
+                ? '<span style="color:red;font-size:12px;">❌</span>'
+                : '<span style="color:green;font-size:16px;">✔</span>'}
+        </td>`;
+    }
+    
+    // Obtener estado de seguimiento para este registro
+    const seguimiento = obtenerSeguimientoRegistro(r.id);
+    
     tr.innerHTML = `
       <td>${i + 1}</td>
       <td>${r.numeroExtintor}</td>
@@ -514,24 +569,26 @@ function renderTabla() {
       <td>${r.zonaRiesgo}</td>
       <td>${r.fechaCarga}</td>
       <td>${r.pruebaHidrostatica}</td>
-      <td>${okNc(r.a1)}</td><td>${okNc(r.a2)}</td><td>${okNc(r.a3)}</td><td>${okNc(r.a4)}</td>
-      <td>${okNc(r.a5)}</td><td>${okNc(r.a6)}</td><td>${okNc(r.a7)}</td><td>${okNc(r.a8)}</td>
-      <td>${okNc(r.a9)}</td><td>${okNc(r.a10)}</td><td>${okNc(r.a11)}</td><td>${okNc(r.a12)}</td>
-      <td>${okNc(r.a13)}</td><td>${okNc(r.a14)}</td><td>${okNc(r.a15)}</td><td>${okNc(r.a16)}</td>
-      <td>${okNc(r.a17)}</td><td>${okNc(r.a18)}</td><td>${okNc(r.a19)}</td><td>${okNc(r.a20)}</td>
+      ${anomaliasHtml}
       <td class="left">${obtenerDetallesNC(r) || "Sin NC"}</td>
-      <td>${obtenerPrioridades(r) || "-"}</td>
+      <td class="left">${obtenerPrioridades(r) || "-"}</td>
       <td class="left">
         ${formatearObservaciones(r.observaciones)}
         <div class="thumbs">${(r.imagenes || []).map(img => `<img src="${img}">`).join("")}</div>
       </td>
-      <td>
+      <td class="seguimiento-cell" style="text-align:center; background:#fef3c7;">
+        <div class="seguimiento-estado" id="seguimiento-${r.id}">
+          ${renderSeguimientoEstado(r.id, seguimiento)}
+        </div>
+      </td>
+      <td class="acciones-cell" style="white-space:nowrap;">
         <button class="mini-btn warning" onclick="editarRegistro('${r.id}')">✏️</button>
         <button class="mini-btn danger" onclick="eliminarRegistro('${r.id}')">🗑️</button>
       </td>
     `;
     tbody.appendChild(tr);
   });
+  
   if (!registros.length) {
     const tr = document.createElement("tr");
     tr.innerHTML = `<td colspan="33">No hay registros.</td>`;
@@ -539,33 +596,65 @@ function renderTabla() {
   }
 }
 
+function renderSeguimientoEstado(idRegistro, seguimiento) {
+  if (!seguimiento) {
+    return `<button class="btn-seguimiento" onclick="iniciarSeguimiento('${idRegistro}')">📋 Iniciar</button>`;
+  }
+  
+  const fecha = seguimiento.fechaLevantamiento ? new Date(seguimiento.fechaLevantamiento).toLocaleDateString() : "-";
+  const estadoClass = {
+    'pendiente': 'estado-pendiente',
+    'proceso': 'estado-proceso',
+    'levantado': 'estado-levantado',
+    'verificado': 'estado-verificado'
+  }[seguimiento.estado] || 'estado-pendiente';
+  
+  const estadoIcono = {
+    'pendiente': '⏳',
+    'proceso': '🔄',
+    'levantado': '✅',
+    'verificado': '🔍'
+  }[seguimiento.estado] || '⏳';
+  
+  const estadoTexto = {
+    'pendiente': 'Pendiente',
+    'proceso': 'En proceso',
+    'levantado': 'Levantado',
+    'verificado': 'Verificado'
+  }[seguimiento.estado] || 'Pendiente';
+  
+  return `
+    <div class="seguimiento-info" style="font-size:0.75rem;">
+      <div class="seguimiento-estado-badge ${estadoClass}">
+        ${estadoIcono} ${estadoTexto}
+      </div>
+      <div class="seguimiento-fecha" style="font-size:0.7rem; color:#666;">${fecha}</div>
+      <div class="seguimiento-responsable" style="font-size:0.7rem;">${seguimiento.responsable || ""}</div>
+      <button class="btn-seguimiento-small" onclick="editarSeguimiento('${idRegistro}')" style="margin-top:4px;">📝 Editar</button>
+    </div>
+  `;
+}
+
 // ── Dashboard ──
+// ========== DASHBOARD POR CLIENTE ==========
+
+let zonaChartCliente = null;
+let agenteChartCliente = null;
+let actividadesMesChart = null;
+
 function actualizarDashboard() {
+  if (!registros.length) {
+    mostrarDashboardVacio();
+    return;
+  }
+  
+  // Filtrar solo registros del cliente actual (ya deberían estar filtrados)
   const total = registros.length;
   const conformes = registros.filter(esConforme).length;
-  const observados = total - conformes;
+  const anomalias = total - conformes;
   const pctConforme = total ? Math.round((conformes / total) * 100) : 0;
-
-  document.getElementById("kpiTotal").textContent = total;
-  document.getElementById("kpiConforme").textContent = pctConforme + "%";
-  const sem = document.getElementById("semaforo");
-  sem.textContent = pctConforme + "%";
-  sem.className = "semaphore " + (pctConforme >= 80 ? "green" : pctConforme >= 50 ? "yellow" : "red");
-
-  if (estadoChart) estadoChart.destroy();
-  estadoChart = new Chart(document.getElementById("chartEstados"), {
-    type: "doughnut",
-    data: { labels: ["Conformes", "Con anomalías"], datasets: [{ data: [conformes, observados] }] }
-  });
-
-  const anomCounts = [];
-  for (let i = 1; i <= 20; i++) anomCounts.push(registros.filter(x => x["a" + i]).length);
-  if (anomaliaChart) anomaliaChart.destroy();
-  anomaliaChart = new Chart(document.getElementById("chartAnomalias"), {
-    type: "bar",
-    data: { labels: Array.from({ length: 20 }, (_, i) => "A" + (i + 1)), datasets: [{ label: "Frecuencia", data: anomCounts }] }
-  });
-
+  
+  // Contar anomalías por prioridad
   let urgente = 0, importante = 0, pendiente = 0;
   registros.forEach(r => {
     for (let i = 1; i <= 20; i++) {
@@ -573,16 +662,612 @@ function actualizarDashboard() {
         const p = r["p" + i];
         if (p === "Urgente") urgente++;
         else if (p === "Importante") importante++;
-        else pendiente++;
+        else if (p === "Pendiente") pendiente++;
       }
     }
   });
-  if (prioridadChart) prioridadChart.destroy();
-  prioridadChart = new Chart(document.getElementById("chartPrioridades"), {
-    type: "pie",
-    data: { labels: ["Urgente", "Importante", "Pendiente"], datasets: [{ data: [urgente, importante, pendiente], backgroundColor: ["#dc2626", "#f59e0b", "#16a34a"] }] },
+  
+  // Contar críticos (extintores con al menos una anomalía urgente)
+  const criticos = registros.filter(r => {
+    for (let i = 1; i <= 20; i++) {
+      if (r["a" + i] && r["p" + i] === "Urgente") return true;
+    }
+    return false;
+  }).length;
+  
+  const observados = anomalias - criticos;
+  
+  // Actualizar KPIs
+  document.getElementById("kpi-total-extintores").textContent = total;
+  document.getElementById("kpi-conformes").textContent = conformes;
+  document.getElementById("kpi-pct-conformes").textContent = `${pctConforme}%`;
+  document.getElementById("kpi-anomalias").textContent = anomalias;
+  document.getElementById("kpi-pct-anomalias").textContent = `${Math.round((anomalias/total)*100)}%`;
+  document.getElementById("kpi-urgentes").textContent = urgente;
+  
+  // Estado de extintores
+  document.getElementById("estado-conformes").textContent = conformes;
+  document.getElementById("estado-observado").textContent = observados;
+  document.getElementById("estado-critico").textContent = criticos;
+  
+  // Prioridades
+  document.getElementById("prioridad-urgente").textContent = urgente;
+  document.getElementById("prioridad-importante").textContent = importante;
+  document.getElementById("prioridad-pendiente").textContent = pendiente;
+  
+  // Gráfico por zona de riesgo
+  renderZonaClienteChart();
+  
+  // Gráfico por tipo de agente
+  renderAgenteClienteChart();
+  
+  // Gráfico de actividades por mes
+  renderActividadesMesChart();
+  
+  // Top 5 anomalías
+  renderTopAnomalias();
+  
+  // Resumen por ubicación
+  renderResumenUbicaciones();
+  
+  // Alertas de mantenimiento
+  renderAlertasMantenimiento();
+  
+  // Actualizar información del cliente en el dashboard
+  actualizarInfoClienteDashboard();
+}
+
+function mostrarDashboardVacio() {
+  const contenedores = ["kpi-total-extintores", "kpi-conformes", "kpi-anomalias", "kpi-urgentes"];
+  contenedores.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = "0";
+  });
+  
+  const estadoContenedores = ["estado-conformes", "estado-observado", "estado-critico"];
+  estadoContenedores.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = "0";
+  });
+  
+  const prioridadContenedores = ["prioridad-urgente", "prioridad-importante", "prioridad-pendiente"];
+  prioridadContenedores.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = "0";
+  });
+  
+  document.getElementById("top-anomalias-lista").innerHTML = '<div style="text-align:center; padding:20px;">No hay registros para mostrar</div>';
+  document.getElementById("resumen-ubicaciones").innerHTML = '<div style="text-align:center; padding:20px;">No hay ubicaciones registradas</div>';
+  document.getElementById("alertas-mantenimiento").innerHTML = '<div style="text-align:center; padding:20px;">No hay alertas pendientes</div>';
+}
+
+function renderZonaClienteChart() {
+  const zonas = { Alta: 0, Media: 0, Baja: 0 };
+  registros.forEach(r => {
+    if (zonas[r.zonaRiesgo] !== undefined) zonas[r.zonaRiesgo]++;
+  });
+  
+  const ctx = document.getElementById("chartZonaCliente");
+  if (!ctx) return;
+  
+  if (zonaChartCliente) zonaChartCliente.destroy();
+  zonaChartCliente = new Chart(ctx, {
+    type: "doughnut",
+    data: {
+      labels: ["🔥 Alta", "🟡 Media", "🟢 Baja"],
+      datasets: [{
+        data: [zonas.Alta, zonas.Media, zonas.Baja],
+        backgroundColor: ["#dc2626", "#f59e0b", "#16a34a"],
+        borderWidth: 0
+      }]
+    },
     options: { responsive: true, plugins: { legend: { position: "bottom" } } }
   });
+}
+
+function renderAgenteClienteChart() {
+  const agentes = {};
+  registros.forEach(r => {
+    const tipo = r.tipoAgente || "Otros";
+    agentes[tipo] = (agentes[tipo] || 0) + 1;
+  });
+  
+  const ctx = document.getElementById("chartAgenteCliente");
+  if (!ctx) return;
+  
+  if (agenteChartCliente) agenteChartCliente.destroy();
+  agenteChartCliente = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels: Object.keys(agentes),
+      datasets: [{
+        label: "Cantidad",
+        data: Object.values(agentes),
+        backgroundColor: "#3b82f6",
+        borderRadius: 8
+      }]
+    },
+    options: { responsive: true, plugins: { legend: { display: false } } }
+  });
+}
+
+function renderActividadesMesChart() {
+  const meses = {};
+  const nombresMeses = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+  
+  registros.forEach(r => {
+    if (r.fecha) {
+      const mes = new Date(r.fecha).getMonth();
+      meses[mes] = (meses[mes] || 0) + 1;
+    }
+  });
+  
+  const datos = nombresMeses.map((_, i) => meses[i] || 0);
+  
+  const ctx = document.getElementById("chartActividadesMes");
+  if (!ctx) return;
+  
+  if (actividadesMesChart) actividadesMesChart.destroy();
+  actividadesMesChart = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels: nombresMeses,
+      datasets: [{
+        label: "Extintores inspeccionados",
+        data: datos,
+        borderColor: "#1e3c72",
+        backgroundColor: "rgba(30, 60, 114, 0.1)",
+        fill: true,
+        tension: 0.3,
+        pointBackgroundColor: "#2a5298",
+        pointRadius: 4,
+        pointHoverRadius: 6
+      }]
+    },
+    options: { responsive: true, plugins: { legend: { position: "top" } } }
+  });
+}
+
+function renderTopAnomalias() {
+  const anomCounts = {};
+  for (let i = 1; i <= 20; i++) {
+    const count = registros.filter(r => r["a" + i]).length;
+    if (count > 0) {
+      anomCounts[i] = count;
+    }
+  }
+  
+  const sorted = Object.entries(anomCounts).sort((a, b) => b[1] - a[1]).slice(0, 5);
+  const maxCount = sorted[0]?.[1] || 1;
+  
+  const container = document.getElementById("top-anomalias-lista");
+  if (!container) return;
+  
+  if (sorted.length === 0) {
+    container.innerHTML = '<div style="text-align:center; padding:20px;">✅ Sin anomalías registradas</div>';
+    return;
+  }
+  
+  container.innerHTML = sorted.map(([anom, count], idx) => {
+    const porcentaje = (count / maxCount) * 100;
+    return `
+      <div class="top-anomalia-item">
+        <div class="top-anomalia-numero">${idx + 1}</div>
+        <div class="top-anomalia-info">
+          <span class="top-anomalia-nombre">A${anom} - ${detalleNC[anom]?.substring(0, 35)}</span>
+          <div class="top-anomalia-barra">
+            <div class="top-anomalia-barra-fill" style="width: ${porcentaje}%;"></div>
+          </div>
+          <span class="top-anomalia-count">${count} vez/veces</span>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+function renderResumenUbicaciones() {
+  const ubicaciones = {};
+  registros.forEach(r => {
+    const ub = r.ubicacion || "No especificada";
+    if (!ubicaciones[ub]) {
+      ubicaciones[ub] = { total: 0, conformes: 0 };
+    }
+    ubicaciones[ub].total++;
+    if (esConforme(r)) ubicaciones[ub].conformes++;
+  });
+  
+  const container = document.getElementById("resumen-ubicaciones");
+  if (!container) return;
+  
+  if (Object.keys(ubicaciones).length === 0) {
+    container.innerHTML = '<div style="text-align:center; padding:20px;">No hay ubicaciones registradas</div>';
+    return;
+  }
+  
+  container.innerHTML = Object.entries(ubicaciones).map(([nombre, data]) => {
+    const pct = Math.round((data.conformes / data.total) * 100);
+    return `
+      <div class="ubicacion-card">
+        <div class="ubicacion-nombre">📍 ${nombre}</div>
+        <div class="ubicacion-stats">
+          <div class="ubicacion-stat">
+            <div class="ubicacion-stat-num">${data.total}</div>
+            <div class="ubicacion-stat-label">Total</div>
+          </div>
+          <div class="ubicacion-stat">
+            <div class="ubicacion-stat-num" style="color:#16a34a;">${data.conformes}</div>
+            <div class="ubicacion-stat-label">Conformes</div>
+          </div>
+          <div class="ubicacion-stat">
+            <div class="ubicacion-stat-num" style="color:${pct >= 80 ? '#16a34a' : pct >= 50 ? '#f59e0b' : '#dc2626'};">${pct}%</div>
+            <div class="ubicacion-stat-label">Eficacia</div>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+function renderAlertasMantenimiento() {
+  const hoy = new Date();
+  const unMes = new Date();
+  unMes.setMonth(unMes.getMonth() + 1);
+  
+  const alertas = [];
+  
+  registros.forEach(r => {
+    if (r.pruebaHidrostatica) {
+      const fechaPH = new Date(r.pruebaHidrostatica);
+      const diasRestantes = Math.ceil((fechaPH - hoy) / (1000 * 60 * 60 * 24));
+      
+      if (diasRestantes <= 30 && diasRestantes > 0) {
+        alertas.push({
+          tipo: "urgente",
+          icono: "⚠️",
+          titulo: `Prueba hidrostática próxima`,
+          detalle: `EEP ${r.numeroExtintor} - ${r.ubicacion}`,
+          fecha: `Vence en ${diasRestantes} días`,
+          extintor: r.numeroExtintor
+        });
+      }
+    }
+    
+    if (r.fechaCarga) {
+      const fechaCarga = new Date(r.fechaCarga);
+      const unAnio = new Date(fechaCarga);
+      unAnio.setFullYear(unAnio.getFullYear() + 1);
+      
+      if (unAnio <= hoy) {
+        alertas.push({
+          tipo: "urgente",
+          icono: "🔄",
+          titulo: `Recarga vencida`,
+          detalle: `EEP ${r.numeroExtintor} - ${r.ubicacion}`,
+          fecha: `Vencida desde ${unAnio.toLocaleDateString()}`,
+          extintor: r.numeroExtintor
+        });
+      }
+    }
+  });
+  
+  const container = document.getElementById("alertas-mantenimiento");
+  if (!container) return;
+  
+  if (alertas.length === 0) {
+    container.innerHTML = '<div style="text-align:center; padding:20px; color:#16a34a;">✅ Todas las fechas de mantenimiento están al día</div>';
+    return;
+  }
+  
+  container.innerHTML = alertas.slice(0, 5).map(a => `
+    <div class="alerta-item ${a.tipo}">
+      <div class="alerta-icono">${a.icono}</div>
+      <div class="alerta-info">
+        <div class="alerta-titulo">${a.titulo}</div>
+        <div class="alerta-detalle">${a.detalle}</div>
+      </div>
+      <div class="alerta-fecha">${a.fecha}</div>
+    </div>
+  `).join("");
+}
+
+function actualizarInfoClienteDashboard() {
+  const datosSesion = localStorage.getItem("datosInspeccion");
+  if (datosSesion) {
+    const sesion = JSON.parse(datosSesion);
+    document.getElementById("dashboard-cliente-nombre").innerHTML = `${sesion.cliente || "Cliente"} <span style="font-size:0.85rem; opacity:0.8;">- ${sesion.codigoSHK || "SHK"}</span>`;
+    document.getElementById("dashboard-codigo").textContent = sesion.codigoSHK || "---";
+    document.getElementById("dashboard-ultima-fecha").textContent = sesion.fecha || new Date().toLocaleDateString();
+  }
+  
+  const hoy = new Date();
+  document.getElementById("dashboard-fecha-actual").textContent = hoy.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' }).toUpperCase();
+}
+
+// ========== SEGUIMIENTO DE NO CONFORMIDADES ==========
+
+// Estructura de seguimiento (se guarda en localStorage/Sheets)
+let seguimientoNC = [];
+
+// Cargar seguimiento guardado
+function cargarSeguimiento() {
+  const guardado = localStorage.getItem(`seguimiento_nc_${getClienteActual()}`);
+  if (guardado) {
+    seguimientoNC = JSON.parse(guardado);
+  } else {
+    // Inicializar seguimiento desde los registros actuales
+    inicializarSeguimientoDesdeRegistros();
+  }
+  renderSeguimiento();
+  actualizarKPISeguimiento();
+}
+
+function getClienteActual() {
+  const datos = localStorage.getItem("datosInspeccion");
+  if (datos) {
+    const sesion = JSON.parse(datos);
+    return sesion.codigoSHK || "default";
+  }
+  return "default";
+}
+
+function inicializarSeguimientoDesdeRegistros() {
+  seguimientoNC = [];
+  
+  registros.forEach(registro => {
+    for (let i = 1; i <= 20; i++) {
+      if (registro["a" + i]) {
+        seguimientoNC.push({
+          id: `${registro.id}_A${i}`,
+          idRegistro: registro.id,
+          numeroExtintor: registro.numeroExtintor,
+          codigoAnomalia: `A${i}`,
+          descripcion: detalleNC[i],
+          prioridad: registro["p" + i] || "Pendiente",
+          ubicacion: registro.ubicacion,
+          fechaInspeccion: registro.fecha,
+          estado: "pendiente",
+          fechaLevantamiento: null,
+          responsable: null,
+          accionRealizada: null,
+          evidencia: null
+        });
+      }
+    }
+  });
+  
+  guardarSeguimiento();
+}
+
+function guardarSeguimiento() {
+  localStorage.setItem(`seguimiento_nc_${getClienteActual()}`, JSON.stringify(seguimientoNC));
+}
+
+function renderSeguimiento() {
+  const tbody = document.getElementById("tbody-seguimiento");
+  if (!tbody) return;
+  
+  const filtroEstado = document.getElementById("filtro-estado-nc")?.value || "todos";
+  const filtroExtintor = document.getElementById("filtro-extintor-nc")?.value.toLowerCase() || "";
+  
+  let filtrados = seguimientoNC;
+  
+  if (filtroEstado !== "todos") {
+    filtrados = filtrados.filter(nc => nc.estado === filtroEstado);
+  }
+  if (filtroExtintor) {
+    filtrados = filtrados.filter(nc => nc.numeroExtintor?.toLowerCase().includes(filtroExtintor));
+  }
+  
+  if (filtrados.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="11" style="text-align:center; padding:40px;">📭 No hay no conformidades para mostrar</td></tr>`;
+    return;
+  }
+  
+  tbody.innerHTML = filtrados.map(nc => {
+    const estadoClass = {
+      pendiente: "estado-pendiente",
+      proceso: "estado-proceso", 
+      corregida: "estado-corregida",
+      verificada: "estado-verificada"
+    }[nc.estado] || "estado-pendiente";
+    
+    const estadoTexto = {
+      pendiente: "⏳ Pendiente",
+      proceso: "🔄 En proceso",
+      corregida: "✅ Corregida",
+      verificada: "🔍 Verificada"
+    }[nc.estado] || nc.estado;
+    
+    const prioridadClass = nc.prioridad === "Urgente" ? "badge-urgente" : 
+                          (nc.prioridad === "Importante" ? "badge-importante" : "badge-pendiente");
+    
+    return `
+      <tr>
+        <td><strong>${nc.numeroExtintor || "-"}</strong></td>
+        <td>${nc.codigoAnomalia}</td>
+        <td>${nc.descripcion}</td>
+        <td><span class="badge ${prioridadClass}">${nc.prioridad}</span></td>
+        <td>${nc.ubicacion || "-"}</td>
+        <td>${nc.fechaInspeccion || "-"}</td>
+        <td><span class="estado-nc ${estadoClass}">${estadoTexto}</span></td>
+        <td>${nc.fechaLevantamiento || "-"}</td>
+        <td>${nc.responsable || "-"}</td>
+        <td style="max-width:200px; white-space:normal;">${nc.accionRealizada || "-"}</td>
+        <td>
+          <button class="btn-levantar" onclick="abrirModalLevantar('${nc.id}')">
+            ${nc.estado === 'corregida' || nc.estado === 'verificada' ? '📝 Editar' : '🔧 Levantar'}
+          </button>
+        </td>
+      </tr>
+    `;
+  }).join("");
+}
+
+function actualizarKPISeguimiento() {
+  const total = seguimientoNC.length;
+  const pendientes = seguimientoNC.filter(nc => nc.estado === "pendiente").length;
+  const proceso = seguimientoNC.filter(nc => nc.estado === "proceso").length;
+  const corregidas = seguimientoNC.filter(nc => nc.estado === "corregida").length;
+  const verificadas = seguimientoNC.filter(nc => nc.estado === "verificada").length;
+  
+  document.getElementById("seguimiento-total-nc").textContent = total;
+  document.getElementById("seguimiento-pendientes").textContent = pendientes;
+  document.getElementById("seguimiento-proceso").textContent = proceso;
+  document.getElementById("seguimiento-corregidas").textContent = corregidas;
+  document.getElementById("seguimiento-verificadas").textContent = verificadas;
+}
+
+let ncActual = null;
+
+function abrirModalLevantar(id) {
+  ncActual = seguimientoNC.find(nc => nc.id === id);
+  if (!ncActual) return;
+  
+  document.getElementById("modal-info-nc").innerHTML = `
+    <strong>EEP: ${ncActual.numeroExtintor}</strong><br>
+    <strong>Anomalía:</strong> ${ncActual.codigoAnomalia} - ${ncActual.descripcion}<br>
+    <strong>Prioridad:</strong> <span class="badge ${ncActual.prioridad === 'Urgente' ? 'badge-urgente' : (ncActual.prioridad === 'Importante' ? 'badge-importante' : 'badge-pendiente')}">${ncActual.prioridad}</span><br>
+    <strong>Ubicación:</strong> ${ncActual.ubicacion || "-"}
+  `;
+  
+  document.getElementById("modal-estado-nc").value = ncActual.estado;
+  document.getElementById("modal-fecha-levantamiento").value = ncActual.fechaLevantamiento || new Date().toISOString().split("T")[0];
+  document.getElementById("modal-responsable").value = ncActual.responsable || "";
+  document.getElementById("modal-accion-realizada").value = ncActual.accionRealizada || "";
+  document.getElementById("modal-evidencia").value = "";
+  
+  document.getElementById("modal-levantar-nc").style.display = "flex";
+}
+
+function cerrarModalLevantar() {
+  document.getElementById("modal-levantar-nc").style.display = "none";
+  ncActual = null;
+}
+
+async function guardarLevantamientoNC() {
+  if (!ncActual) return;
+  
+  const nuevoEstado = document.getElementById("modal-estado-nc").value;
+  const fechaLev = document.getElementById("modal-fecha-levantamiento").value;
+  const responsable = document.getElementById("modal-responsable").value;
+  const accion = document.getElementById("modal-accion-realizada").value;
+  const evidenciaFile = document.getElementById("modal-evidencia").files[0];
+  
+  // Validar campos requeridos según estado
+  if (nuevoEstado !== "pendiente" && !responsable) {
+    notif("⚠️ Debe ingresar el responsable del levantamiento", "warn");
+    return;
+  }
+  
+  if ((nuevoEstado === "corregida" || nuevoEstado === "verificada") && !accion) {
+    notif("⚠️ Debe describir la acción correctiva realizada", "warn");
+    return;
+  }
+  
+  ncActual.estado = nuevoEstado;
+  ncActual.fechaLevantamiento = fechaLev;
+  ncActual.responsable = responsable;
+  ncActual.accionRealizada = accion;
+  
+  // Procesar evidencia si existe
+  if (evidenciaFile) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      ncActual.evidencia = e.target.result;
+      finalizarGuardado();
+    };
+    reader.readAsDataURL(evidenciaFile);
+  } else {
+    finalizarGuardado();
+  }
+  
+  function finalizarGuardado() {
+    guardarSeguimiento();
+    renderSeguimiento();
+    actualizarKPISeguimiento();
+    cerrarModalLevantar();
+    notif(`✅ NC ${ncActual.codigoAnomalia} actualizada a ${getEstadoTexto(nuevoEstado)}`, "success");
+    
+    // Registrar en trazabilidad
+    if (typeof registrarTrazabilidad !== 'undefined') {
+      registrarTrazabilidad(
+        document.getElementById("banner-inspector")?.textContent || "usuario",
+        "tecnico",
+        `Levantamiento NC ${ncActual.codigoAnomalia} - ${getEstadoTexto(nuevoEstado)} - EEP ${ncActual.numeroExtintor}`
+      );
+    }
+  }
+}
+
+function getEstadoTexto(estado) {
+  const textos = {
+    pendiente: "Pendiente",
+    proceso: "En proceso",
+    corregida: "Corregida",
+    verificada: "Verificada"
+  };
+  return textos[estado] || estado;
+}
+
+function filtrarSeguimiento() {
+  renderSeguimiento();
+}
+
+function exportarSeguimientoExcel() {
+  if (seguimientoNC.length === 0) {
+    notif("No hay datos para exportar", "warn");
+    return;
+  }
+  
+  const encabezados = ["EEP", "Código", "Anomalía", "Prioridad", "Ubicación", "Fecha Inspección", "Estado", "Fecha Levantamiento", "Responsable", "Acción Realizada"];
+  
+  const filas = seguimientoNC.map(nc => [
+    nc.numeroExtintor,
+    nc.codigoAnomalia,
+    nc.descripcion,
+    nc.prioridad,
+    nc.ubicacion,
+    nc.fechaInspeccion,
+    getEstadoTexto(nc.estado),
+    nc.fechaLevantamiento || "",
+    nc.responsable || "",
+    nc.accionRealizada || ""
+  ]);
+  
+  const csvContent = [encabezados, ...filas].map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(",")).join("\n");
+  const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `Seguimiento_NC_${getClienteActual()}_${new Date().toISOString().split("T")[0]}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  notif("✅ Exportado correctamente", "success");
+}
+
+// Modificar la función switchTab para incluir seguimiento
+// Reemplazar la función switchTab existente
+async function switchTab(tab, btn) {
+  document.querySelectorAll(".tab-content").forEach(x => x.classList.remove("active"));
+  document.querySelectorAll(".tab-btn").forEach(x => x.classList.remove("active"));
+  document.getElementById("tab-" + tab).classList.add("active");
+  btn.classList.add("active");
+  
+  if (tab === "dashboard") actualizarDashboard();
+  if (tab === "informe") await actualizarInforme();
+  if (tab === "seguimiento") {
+    cargarSeguimiento();
+  }
+}
+
+// Modificar init() para cargar seguimiento
+// Agregar al final de init():
+async function init() {
+  if (!cargarDatosSesion()) return;
+  await cargarInspeccionActual();
+  agregarAnomalia();
+  await sincronizarDesdeSheets();
+  cargarSeguimiento(); // <-- Agregar esta línea
 }
 
 async function logoABase64(ruta) {
@@ -619,6 +1304,7 @@ async function actualizarInforme() {
     }
 
     const clienteConfig = CLIENT_CONFIG[codigoSHK] || CLIENT_CONFIG["default"];
+    const inspector = JSON.parse(localStorage.getItem("datosInspeccion"))?.nombre || "No especificado";
     const total = registros.length;
     const conformes = registros.filter(esConforme).length;
     const observados = total - conformes;
@@ -659,28 +1345,6 @@ async function actualizarInforme() {
 
           <h3>Inspección N° ${numRegistro}</h3>
 
-          <!-- TABLA 1: Resultado conforme/no conforme -->
-          <table style="width:100%;border-collapse:collapse;font-size:10px;">
-            <tr>
-              <td rowspan="2" style="border:1px solid #000;padding:6px;width:22%;vertical-align:middle;font-weight:bold;">
-                Resultados de la Inspección
-              </td>
-              <td colspan="2" style="border:1px solid #000;padding:4px;text-align:center;font-weight:bold;">
-                Conforme
-              </td>
-              <td colspan="2" style="border:1px solid #000;padding:4px;text-align:center;font-weight:bold;">
-                No Conforme
-              </td>
-            </tr>
-            <tr>
-              <td colspan="2" style="border:1px solid #000;padding:6px;text-align:center;font-size:14px;font-weight:bold;">
-                ${xConforme}
-              </td>
-              <td colspan="2" style="border:1px solid #000;padding:6px;text-align:center;font-size:14px;font-weight:bold;">
-                ${xNoConforme}
-              </td>
-            </tr>
-          </table>
 
           <!-- TABLA 2: Datos del extintor (con pequeño espacio arriba) -->
           <table style="width:100%;border-collapse:collapse;font-size:10px;margin-top:8px;margin-bottom:20px;table-layout:fixed;">
@@ -791,6 +1455,32 @@ async function actualizarInforme() {
             </tr>
 
           </table>
+
+
+          <!-- TABLA 1: Resultado conforme/no conforme -->
+          <table style="width:100%;border-collapse:collapse;font-size:10px;">
+            <tr>
+              <td rowspan="2" style="border:1px solid #000;padding:6px;width:22%;vertical-align:middle;font-weight:bold;">
+                Resultados de la Inspección
+              </td>
+              <td colspan="2" style="border:1px solid #000;padding:4px;text-align:center;font-weight:bold;">
+                Conforme
+              </td>
+              <td colspan="2" style="border:1px solid #000;padding:4px;text-align:center;font-weight:bold;">
+                No Conforme
+              </td>
+            </tr>
+            <tr>
+              <td colspan="2" style="border:1px solid #000;padding:6px;text-align:center;font-size:14px;font-weight:bold;">
+                ${xConforme}
+              </td>
+              <td colspan="2" style="border:1px solid #000;padding:6px;text-align:center;font-size:14px;font-weight:bold;">
+                ${xNoConforme}
+              </td>
+            </tr>
+          </table>
+
+
         </div>
       `;
     }
@@ -1021,6 +1711,519 @@ async function descargarPDF() {
   }
 
   pdf.save(`Informe_${cliente}.pdf`);
+}
+
+// Variables globales
+let inspeccionActual = null;
+let inspeccionFinalizada = false;
+
+// Al iniciar, cargar o crear inspección actual
+async function init() {
+  if (!cargarDatosSesion()) return;
+  
+  // Verificar si ya existe una inspección en progreso para este cliente+fecha
+  await cargarInspeccionActual();
+  
+  agregarAnomalia();
+  await sincronizarDesdeSheets();
+  cargarSeguimientoRegistros(); 
+}
+
+async function cargarInspeccionActual() {
+  const sesion = JSON.parse(localStorage.getItem("datosInspeccion"));
+  if (!sesion) return;
+  
+  const inspecciones = await sheetsObtenerInspecciones();
+  const idInspeccion = generarIdInspeccion(sesion);
+  
+  const existente = inspecciones.find(i => i.id === idInspeccion && i.estado === "en_progreso");
+  
+  if (existente) {
+    inspeccionActual = existente;
+    registros = existente.registros || [];
+    renderTabla();
+    actualizarDashboard();
+    mostrarNotificacion("Inspección en progreso cargada", "info");
+  } else {
+    // Crear nueva inspección
+    inspeccionActual = {
+      id: idInspeccion,
+      ...sesion,
+      estado: "en_progreso",
+      registros: [],
+      fechaCreacion: new Date().toISOString(),
+      fechaModificacion: new Date().toISOString()
+    };
+  }
+  inspeccionFinalizada = false;
+}
+
+function generarIdInspeccion(sesion) {
+  const fecha = sesion.fecha.replace(/-/g, "");
+  const timestamp = Date.now();
+  return `INS-${sesion.codigoSHK}-${fecha}-${timestamp}`;
+}
+
+// Finalizar inspección
+async function finalizarInspeccion() {
+  if (inspeccionFinalizada) {
+    alert("⚠️ Esta inspección ya fue finalizada.");
+    return;
+  }
+  
+  if (registros.length === 0) {
+    alert("❌ No hay registros para finalizar la inspección.");
+    return;
+  }
+  
+  const confirmar = confirm(`¿Finalizar inspección de ${inspeccionActual.cliente} - ${inspeccionActual.sede}?\n\nSe guardarán ${registros.length} registros y no se podrán modificar después.`);
+  
+  if (!confirmar) return;
+  
+  inspeccionActual.estado = "completada";
+  inspeccionActual.registros = [...registros];
+  inspeccionActual.fechaModificacion = new Date().toISOString();
+  inspeccionActual.totalRegistros = registros.length;
+  inspeccionActual.totalConformes = registros.filter(esConforme).length;
+  
+  await sheetsGuardarInspeccion(inspeccionActual);
+  
+  inspeccionFinalizada = true;
+  
+  // Bloquear edición
+  bloquearEdicion(true);
+  
+  mostrarNotificacion(`✅ Inspección finalizada guardada con ID: ${inspeccionActual.id}`, "success");
+  
+  // Registrar en trazabilidad (si existe la función)
+  if (typeof registrarTrazabilidad !== 'undefined') {
+    registrarTrazabilidad(
+      sesionActual?.usuario || "tecnico",
+      sesionActual?.rol || "tecnico",
+      `Finalizó inspección ${inspeccionActual.id} - ${registros.length} registros`
+    );
+  }
+}
+
+function bloquearEdicion(bloquear) {
+  const botones = document.querySelectorAll(".action:not(.btn-volver):not(.btn-salir)");
+  botones.forEach(btn => {
+    if (bloquear) btn.disabled = true;
+    else btn.disabled = false;
+  });
+  
+  const inputs = document.querySelectorAll(".field input, .field select, .field textarea");
+  inputs.forEach(input => {
+    if (bloquear) input.readOnly = true;
+    else input.readOnly = false;
+  });
+  
+  document.getElementById("anomaliasGrid").style.pointerEvents = bloquear ? "none" : "auto";
+}
+
+// ========== SEGUIMIENTO DE INSPECCIONES ==========
+
+// Estructura de seguimiento por registro
+let seguimientoRegistros = {};
+
+function cargarSeguimientoRegistros() {
+  const clienteId = getClienteActual();
+  const guardado = localStorage.getItem(`seguimiento_inspeccion_${clienteId}`);
+  if (guardado) {
+    seguimientoRegistros = JSON.parse(guardado);
+  } else {
+    seguimientoRegistros = {};
+  }
+}
+
+function guardarSeguimientoRegistros() {
+  const clienteId = getClienteActual();
+  localStorage.setItem(`seguimiento_inspeccion_${clienteId}`, JSON.stringify(seguimientoRegistros));
+}
+
+function obtenerSeguimientoRegistro(idRegistro) {
+  return seguimientoRegistros[idRegistro] || null;
+}
+
+function iniciarSeguimiento(idRegistro) {
+  const registro = registros.find(r => r.id === idRegistro);
+  if (!registro) return;
+  
+  // Verificar si el registro tiene anomalías
+  let tieneAnomalias = false;
+  for (let i = 1; i <= 20; i++) {
+    if (registro["a" + i]) {
+      tieneAnomalias = true;
+      break;
+    }
+  }
+  
+  if (!tieneAnomalias) {
+    notif("✅ Este equipo no tiene anomalías para levantar", "info");
+    return;
+  }
+  
+  seguimientoRegistros[idRegistro] = {
+    idRegistro: idRegistro,
+    estado: "proceso",
+    fechaInicio: new Date().toISOString(),
+    fechaLevantamiento: null,
+    responsable: "",
+    observaciones: "",
+    anomaliasLevantadas: [],
+    imagenes: []
+  };
+  
+  guardarSeguimientoRegistros();
+  renderTabla();
+  abrirModalSeguimiento(idRegistro);
+}
+
+function editarSeguimiento(idRegistro) {
+  abrirModalSeguimiento(idRegistro);
+}
+
+function abrirModalSeguimiento(idRegistro) {
+  const registro = registros.find(r => r.id === idRegistro);
+  const seguimiento = seguimientoRegistros[idRegistro] || {
+    idRegistro: idRegistro,
+    estado: "pendiente",
+    fechaInicio: null,
+    fechaLevantamiento: null,
+    responsable: "",
+    observaciones: "",
+    anomaliasLevantadas: [],
+    imagenes: []
+  };
+  
+  // Crear modal si no existe
+  let modal = document.getElementById("modal-seguimiento");
+  if (!modal) {
+    modal = document.createElement("div");
+    modal.id = "modal-seguimiento";
+    modal.className = "modal";
+    document.body.appendChild(modal);
+  }
+  
+  // Generar lista de anomalías del registro
+  const anomaliasLista = [];
+  for (let i = 1; i <= 20; i++) {
+    if (registro["a" + i]) {
+      const levantada = seguimiento.anomaliasLevantadas?.includes(i) || false;
+      anomaliasLista.push(`
+        <div class="anomalia-seguimiento-item">
+          <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+            <input type="checkbox" class="anomalia-check" data-anomalia="${i}" ${levantada ? "checked" : ""}>
+            <strong>A${i}</strong> - ${detalleNC[i]}
+            <span class="prioridad-badge ${registro["p" + i] === "Urgente" ? "urgente" : (registro["p" + i] === "Importante" ? "importante" : "pendiente")}">
+              ${registro["p" + i] || "Pendiente"}
+            </span>
+          </label>
+        </div>
+      `);
+    }
+  }
+  
+  modal.innerHTML = `
+    <div class="modal-contenido" style="max-width: 600px;">
+      <div class="modal-header" style="background:#1e3c72;">
+        <h3>📋 Seguimiento de Inspección</h3>
+        <button class="modal-cerrar" onclick="cerrarModalSeguimiento()">&times;</button>
+      </div>
+      <div class="modal-cuerpo">
+        <div class="info-registro" style="background:#f8fafc; padding:12px; border-radius:10px; margin-bottom:15px;">
+          <p><strong>EEP:</strong> ${registro.numeroExtintor}</p>
+          <p><strong>Ubicación:</strong> ${registro.ubicacion}</p>
+          <p><strong>Tipo:</strong> ${registro.tipoAgente} | <strong>Capacidad:</strong> ${registro.capacidad}</p>
+        </div>
+        
+        <div class="campo-form">
+          <label>Estado del seguimiento:</label>
+          <select id="modal-seguimiento-estado">
+            <option value="pendiente" ${seguimiento.estado === "pendiente" ? "selected" : ""}>⏳ Pendiente - No iniciado</option>
+            <option value="proceso" ${seguimiento.estado === "proceso" ? "selected" : ""}>🔄 En proceso - Trabajando en corrección</option>
+            <option value="levantado" ${seguimiento.estado === "levantado" ? "selected" : ""}>✅ Levantado - Corregido y verificado</option>
+            <option value="verificado" ${seguimiento.estado === "verificado" ? "selected" : ""}>🔍 Verificado - Validado por supervisor</option>
+          </select>
+        </div>
+        
+        <div class="campo-form">
+          <label>Responsable del levantamiento:</label>
+          <input type="text" id="modal-seguimiento-responsable" value="${seguimiento.responsable || ""}" placeholder="Nombre del responsable">
+        </div>
+        
+        <div class="campo-form">
+          <label>Fecha de levantamiento:</label>
+          <input type="date" id="modal-seguimiento-fecha" value="${seguimiento.fechaLevantamiento || new Date().toISOString().split("T")[0]}">
+        </div>
+        
+        <div class="campo-form">
+          <label>Anomalías levantadas (marque las corregidas):</label>
+          <div class="anomalias-seguimiento-lista">
+            ${anomaliasLista.join("")}
+          </div>
+        </div>
+        
+        <div class="campo-form">
+          <label>Observaciones / Acción correctiva:</label>
+          <textarea id="modal-seguimiento-obs" rows="3" placeholder="Describa las acciones realizadas...">${seguimiento.observaciones || ""}</textarea>
+        </div>
+        
+        <div class="campo-form">
+          <label>Evidencia (foto):</label>
+          <input type="file" id="modal-seguimiento-evidencia" accept="image/*">
+          ${seguimiento.imagenes && seguimiento.imagenes.length ? '<div class="evidencia-preview"><img src="' + seguimiento.imagenes[0] + '" style="width:80px; margin-top:8px; border-radius:8px;"></div>' : ''}
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="action secondary" onclick="cerrarModalSeguimiento()">Cancelar</button>
+        <button class="action success" onclick="guardarSeguimientoRegistro('${idRegistro}')">💾 Guardar seguimiento</button>
+      </div>
+    </div>
+  `;
+  
+  modal.style.display = "flex";
+}
+
+function cerrarModalSeguimiento() {
+  const modal = document.getElementById("modal-seguimiento");
+  if (modal) modal.style.display = "none";
+}
+
+async function guardarSeguimientoRegistro(idRegistro) {
+  const registro = registros.find(r => r.id === idRegistro);
+  if (!registro) return;
+  
+  const nuevoEstado = document.getElementById("modal-seguimiento-estado").value;
+  const responsable = document.getElementById("modal-seguimiento-responsable").value;
+  const fecha = document.getElementById("modal-seguimiento-fecha").value;
+  const observaciones = document.getElementById("modal-seguimiento-obs").value;
+  
+  // Recoger anomalías levantadas
+  const anomaliasLevantadas = [];
+  document.querySelectorAll(".anomalia-check").forEach(check => {
+    if (check.checked) {
+      anomaliasLevantadas.push(parseInt(check.dataset.anomalia));
+    }
+  });
+  
+  // Validar que si está levantado/verificado, se haya marcado al menos una anomalía
+  if ((nuevoEstado === "levantado" || nuevoEstado === "verificado") && anomaliasLevantadas.length === 0) {
+    notif("⚠️ Debe marcar al menos una anomalía como levantada", "warn");
+    return;
+  }
+  
+  if ((nuevoEstado === "levantado" || nuevoEstado === "verificado") && !responsable) {
+    notif("⚠️ Debe ingresar el responsable", "warn");
+    return;
+  }
+  
+  let imagenes = [];
+  const evidenciaFile = document.getElementById("modal-seguimiento-evidencia").files[0];
+  if (evidenciaFile) {
+    imagenes = await filesToDataUrls([evidenciaFile]);
+  } else if (seguimientoRegistros[idRegistro]?.imagenes) {
+    imagenes = seguimientoRegistros[idRegistro].imagenes;
+  }
+  
+  seguimientoRegistros[idRegistro] = {
+    idRegistro: idRegistro,
+    estado: nuevoEstado,
+    fechaInicio: seguimientoRegistros[idRegistro]?.fechaInicio || new Date().toISOString(),
+    fechaLevantamiento: fecha,
+    responsable: responsable,
+    observaciones: observaciones,
+    anomaliasLevantadas: anomaliasLevantadas,
+    imagenes: imagenes
+  };
+  
+  guardarSeguimientoRegistros();
+  cerrarModalSeguimiento();
+  renderTabla();
+  
+  notif(`✅ Seguimiento guardado - ${getEstadoSeguimientoTexto(nuevoEstado)}`, "success");
+  
+  // Registrar en trazabilidad
+  registrarTrazabilidadSeguimiento(registro, nuevoEstado, anomaliasLevantadas);
+}
+
+function getEstadoSeguimientoTexto(estado) {
+  const textos = {
+    pendiente: "Pendiente",
+    proceso: "En proceso",
+    levantado: "Levantado",
+    verificado: "Verificado"
+  };
+  return textos[estado] || estado;
+}
+
+function registrarTrazabilidadSeguimiento(registro, estado, anomaliasLevantadas) {
+  // Verificar si existe la función global
+  if (typeof window.parent.registrarTrazabilidad === 'function') {
+    window.parent.registrarTrazabilidad(
+      document.getElementById("banner-inspector")?.textContent || "tecnico",
+      "tecnico",
+      `Seguimiento - EEP ${registro.numeroExtintor} - ${getEstadoSeguimientoTexto(estado)} - Anomalías levantadas: ${anomaliasLevantadas.map(a => `A${a}`).join(", ")}`
+    );
+  }
+}
+
+function toggleAnomaliaSeguimiento(idRegistro, anomaliaNum) {
+  // Esta función permite marcar/desmarcar anomalías directamente desde la tabla
+  let seguimiento = seguimientoRegistros[idRegistro];
+  if (!seguimiento) {
+    // Iniciar seguimiento automáticamente
+    iniciarSeguimiento(idRegistro);
+    seguimiento = seguimientoRegistros[idRegistro];
+    if (!seguimiento) return;
+  }
+  
+  if (!seguimiento.anomaliasLevantadas) seguimiento.anomaliasLevantadas = [];
+  
+  const index = seguimiento.anomaliasLevantadas.indexOf(anomaliaNum);
+  if (index === -1) {
+    seguimiento.anomaliasLevantadas.push(anomaliaNum);
+    notif(`✅ Anomalía A${anomaliaNum} marcada como levantada`, "success");
+  } else {
+    seguimiento.anomaliasLevantadas.splice(index, 1);
+    notif(`⚠️ Anomalía A${anomaliaNum} desmarcada`, "warn");
+  }
+  
+  guardarSeguimientoRegistros();
+  renderTabla();
+}
+
+// Ver inspecciones históricas
+async function verInspeccionesHistoricas() {
+  const inspecciones = await sheetsObtenerInspecciones();
+  const completadas = inspecciones.filter(i => i.estado === "completada");
+  
+  const container = document.getElementById("lista-inspecciones");
+  const modal = document.getElementById("modal-historial");
+  
+  if (completadas.length === 0) {
+    container.innerHTML = "<p style='text-align:center; padding:40px;'>📭 No hay inspecciones finalizadas</p>";
+  } else {
+    container.innerHTML = `
+      <table style="width:100%; border-collapse:collapse;">
+        <thead>
+          <tr style="background:#1e3c72; color:white;">
+            <th style="padding:10px;">ID</th>
+            <th>Cliente</th>
+            <th>Sede</th>
+            <th>Fecha</th>
+            <th>Registros</th>
+            <th>Conformidad</th>
+            <th>Inspector</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${completadas.map(ins => `
+            <tr style="border-bottom:1px solid #ddd;">
+              <td style="padding:8px;"><small>${ins.id}</small></td>
+              <td>${ins.cliente}</td>
+              <td>${ins.sede}</td>
+              <td>${ins.fecha}</td>
+              <td>${ins.totalRegistros}</td>
+              <td>${Math.round((ins.totalConformes/ins.totalRegistros)*100)}%</td>
+              <td>${ins.nombre}</td>
+              <td>
+                <button onclick="verDetalleInspeccion('${ins.id}')" style="background:#3b82f6; color:white; border:none; border-radius:6px; padding:5px 10px; cursor:pointer;">👁️ Ver</button>
+                <button onclick="exportarInspeccionPDF('${ins.id}')" style="background:#dc2626; color:white; border:none; border-radius:6px; padding:5px 10px; cursor:pointer;">📄 PDF</button>
+              </td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+    `;
+  }
+  
+  modal.style.display = "flex";
+}
+
+function cerrarModalHistorial() {
+  document.getElementById("modal-historial").style.display = "none";
+}
+
+async function verDetalleInspeccion(id) {
+  const inspecciones = await sheetsObtenerInspecciones();
+  const inspeccion = inspecciones.find(i => i.id === id);
+  
+  if (!inspeccion) return;
+  
+  // Mostrar los registros en un modal o cargarlos temporalmente
+  const registrosTemp = inspeccion.registros;
+  
+  // Opcional: abrir un modal con los detalles
+  alert(`Inspección ${id}\nRegistros: ${registrosTemp.length}\nConformes: ${inspeccion.totalConformes}`);
+  
+  // O podrías cargarlos en la tabla principal para visualización
+  // (pero sin permitir edición)
+}
+
+async function exportarInspeccionPDF(id) {
+  const inspecciones = await sheetsObtenerInspecciones();
+  const inspeccion = inspecciones.find(i => i.id === id);
+  
+  if (!inspeccion) return;
+  
+  // Guardar temporalmente los registros y generar PDF
+  const registrosOriginales = [...registros];
+  registros = [...inspeccion.registros];
+  await actualizarInforme();
+  await descargarPDF();
+  registros = registrosOriginales;
+  await actualizarInforme();
+}
+
+function mostrarNotificacion(msg, tipo) {
+  // Usar tu sistema de notificaciones existente o crear uno
+  if (typeof notif === 'function') {
+    notif(msg, tipo);
+  } else {
+    alert(msg);
+  }
+}
+
+function volverAClientes() {
+  if (!inspeccionFinalizada && registros.length > 0) {
+    const confirmar = confirm("⚠️ Hay registros sin finalizar. ¿Deseas guardar la inspección antes de salir?");
+    if (confirmar) {
+      // Guardar y luego volver
+      finalizarInspeccionConRetorno();
+      return;
+    }
+  }
+  
+  // Redirigir al sistema principal con un parámetro para mostrar clientes
+  window.location.href = "login_sistema_inspecciones.html?mostrar=clientes";
+}
+
+async function finalizarInspeccionConRetorno() {
+  if (registros.length === 0) {
+    volverDirecto();
+    return;
+  }
+  
+  inspeccionActual.estado = "completada";
+  inspeccionActual.registros = [...registros];
+  inspeccionActual.fechaModificacion = new Date().toISOString();
+  inspeccionActual.totalRegistros = registros.length;
+  inspeccionActual.totalConformes = registros.filter(esConforme).length;
+  
+  await sheetsGuardarInspeccion(inspeccionActual);
+  inspeccionFinalizada = true;
+  
+  mostrarNotificacion("✅ Inspección guardada correctamente", "success");
+  
+  setTimeout(() => {
+    window.location.href = "login_sistema_inspecciones.html?mostrar=clientes";
+  }, 1000);
+}
+
+function volverDirecto() {
+  window.location.href = "login_sistema_inspecciones.html?mostrar=clientes";
 }
 
 // ── Arrancar ──

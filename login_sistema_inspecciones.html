@@ -1,0 +1,731 @@
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --azul-oscuro:#0c1e3f;
+  --azul-medio:#982a2a;
+  --azul-claro:#812323;
+  --verde:#16a34a;
+  --rojo:#dc2626;
+  --amarillo:#d97706;
+  --gris-fondo:#f1f5f9;
+  --gris-borde:#6c2626;
+  --gris-texto:#000000;
+  --blanco:#ffffff;
+  --sombra:0 4px 24px rgba(30,60,114,.13);
+}
+body{font-family:'Segoe UI',Arial,sans-serif;background:var(--gris-fondo);min-height:100vh;}
+
+/* ── PANTALLAS ── */
+.pantalla{display:none;min-height:100vh;animation:fadeIn .35s ease;}
+.pantalla.activa{display:flex;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+
+/* ── LOGIN ── */
+#pantalla-login{
+  align-items:center;justify-content:center;
+  background:linear-gradient(135deg,#1e3c72 0%,#2a5298 60%,#3b82f6 100%);
+}
+.login-card{
+  background:white;border-radius:20px;padding:48px 40px;
+  width:420px;max-width:95vw;
+  box-shadow:0 20px 60px rgba(0,0,0,.25);
+}
+.login-logo{text-align:center;margin-bottom:32px;}
+.login-logo h1{color:var(--azul-oscuro);font-size:1.35rem;font-weight:700;margin-top:8px;}
+.login-logo p{color:var(--gris-texto);font-size:.85rem;margin-top:4px;}
+.login-escudo{width:64px;height:64px;background:linear-gradient(135deg,var(--azul-oscuro),var(--azul-claro));border-radius:16px;display:inline-flex;align-items:center;justify-content:center;color:white;font-size:28px;}
+.login-field{margin-bottom:20px;}
+.login-field label{display:block;font-weight:600;font-size:.88rem;color:#374151;margin-bottom:7px;}
+.login-field input,.login-field select{
+  width:100%;padding:12px 16px;border:1.5px solid var(--gris-borde);
+  border-radius:10px;font-size:.95rem;outline:none;transition:border .2s;
+  background:white;color:#1f2937;
+}
+.login-field input:focus,.login-field select:focus{border-color:var(--azul-claro);box-shadow:0 0 0 3px rgba(59,130,246,.15);}
+.btn-login{
+  width:100%;padding:14px;background:linear-gradient(135deg,var(--azul-oscuro),var(--azul-medio));
+  color:white;border:none;border-radius:10px;font-size:1rem;font-weight:700;
+  cursor:pointer;transition:transform .15s,box-shadow .15s;margin-top:8px;
+}
+.btn-login:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(30,60,114,.4);}
+.error-msg{background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:10px 14px;color:#dc2626;font-size:.88rem;margin-top:12px;display:none;}
+
+/* ── HEADER COMPARTIDO ── */
+.app-header{
+  background:linear-gradient(135deg,var(--azul-oscuro),var(--azul-medio));
+  color:white;padding:14px 28px;display:flex;align-items:center;justify-content:space-between;
+  position:sticky;top:0;z-index:100;box-shadow:0 2px 12px rgba(0,0,0,.2);
+}
+.app-header-izq{display:flex;align-items:center;gap:14px;}
+.app-header h1{font-size:1.05rem;font-weight:700;}
+.app-header p{font-size:.8rem;opacity:.8;}
+.badge-rol{
+  padding:4px 12px;border-radius:20px;font-size:.78rem;font-weight:700;
+  border:1.5px solid rgba(255,255,255,.5);
+}
+.badge-admin{background:rgba(220,38,38,.3);}
+.badge-supervisor{background:rgba(234,179,8,.3);}
+.badge-tecnico{background:rgba(22,163,74,.3);}
+.btn-salir{
+  background:rgba(255,255,255,.15);border:1.5px solid rgba(255,255,255,.4);
+  color:white;border-radius:8px;padding:7px 16px;cursor:pointer;font-size:.85rem;
+  transition:background .2s;
+}
+.btn-salir:hover{background:rgba(255,255,255,.25);}
+.btn-volver{
+  background:rgba(255,255,255,.1);border:1.5px solid rgba(255,255,255,.3);
+  color:white;border-radius:8px;padding:7px 14px;cursor:pointer;font-size:.85rem;margin-right:6px;
+}
+
+/* ── SELECCIÓN DE CLIENTE ── */
+#pantalla-cliente{flex-direction:column;}
+.cliente-cuerpo{flex:1;padding:32px 28px;}
+.cliente-cuerpo h2{color:var(--azul-oscuro);font-size:1.3rem;font-weight:700;margin-bottom:6px;}
+.cliente-cuerpo p{color:var(--gris-texto);font-size:.92rem;margin-bottom:28px;}
+.clientes-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;max-width:900px;}
+.cliente-card{
+  background:white;border:2px solid var(--gris-borde);border-radius:14px;
+  padding:22px 18px;cursor:pointer;transition:all .2s;text-align:center;
+}
+.cliente-card:hover{border-color:var(--azul-claro);box-shadow:var(--sombra);transform:translateY(-2px);}
+.cliente-card:active{transform:translateY(0);}
+.cliente-codigo{
+  font-size:1.5rem;font-weight:800;color:var(--azul-oscuro);
+  background:var(--gris-fondo);border-radius:10px;padding:8px;margin-bottom:10px;display:block;
+}
+.cliente-nombre{font-size:.9rem;font-weight:600;color:#374151;}
+.meta-box{
+  background:white;border-radius:14px;border:1.5px solid var(--gris-borde);
+  padding:24px;max-width:700px;margin:24px 0;
+}
+.meta-box h3{color:var(--azul-oscuro);font-size:1rem;font-weight:700;margin-bottom:16px;}
+.meta-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.meta-field label{display:block;font-size:.82rem;font-weight:600;color:var(--gris-texto);margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px;}
+.meta-field input,.meta-field select{
+  width:100%;padding:10px 14px;border:1.5px solid var(--gris-borde);
+  border-radius:8px;font-size:.92rem;background:white;
+}
+.meta-field input[readonly]{background:#f8fafc;color:#374151;}
+.info-codigo{
+  background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:8px;
+  padding:10px 14px;font-size:.83rem;color:#1d4ed8;margin-top:6px;
+  display:flex;align-items:center;gap:6px;
+}
+.btn-continuar{
+  background:linear-gradient(135deg,var(--verde),#15803d);
+  color:white;border:none;border-radius:10px;padding:13px 32px;
+  font-size:.95rem;font-weight:700;cursor:pointer;transition:all .2s;
+  margin-top:8px;
+}
+.btn-continuar:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(22,163,74,.35);}
+.btn-continuar:disabled{background:#9ca3af;cursor:not-allowed;transform:none;box-shadow:none;}
+
+/* ── MÓDULOS ── */
+#pantalla-modulos{flex-direction:column;}
+.modulos-cuerpo{flex:1;padding:32px 28px;}
+.cliente-banner{
+  background:white;border-radius:14px;border-left:5px solid var(--azul-oscuro);
+  padding:16px 22px;margin-bottom:28px;display:flex;align-items:center;justify-content:space-between;
+  box-shadow:var(--sombra);flex-wrap:wrap;gap:10px;
+}
+.cliente-banner-info h3{color:var(--azul-oscuro);font-size:1.05rem;font-weight:700;}
+.cliente-banner-info p{color:var(--gris-texto);font-size:.85rem;margin-top:2px;}
+.cliente-banner-meta{display:flex;gap:20px;flex-wrap:wrap;}
+.meta-chip{
+  background:var(--gris-fondo);border-radius:8px;padding:7px 14px;font-size:.82rem;
+}
+.meta-chip span{color:var(--gris-texto);}
+.meta-chip strong{color:#1f2937;display:block;font-size:.9rem;}
+.modulos-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:20px;max-width:1000px;}
+.modulo-card{
+  background:white;border-radius:16px;border:2px solid var(--gris-borde);
+  padding:28px 22px;cursor:pointer;transition:all .22s;text-align:center;position:relative;
+}
+.modulo-card:hover{border-color:var(--azul-claro);box-shadow:var(--sombra);transform:translateY(-3px);}
+.modulo-icono{font-size:2.5rem;margin-bottom:14px;}
+.modulo-nombre{font-size:1rem;font-weight:700;color:var(--azul-oscuro);margin-bottom:6px;}
+.modulo-desc{font-size:.82rem;color:var(--gris-texto);line-height:1.4;}
+.modulo-badge{
+  position:absolute;top:12px;right:12px;background:#dbeafe;color:#1d4ed8;
+  font-size:.72rem;font-weight:700;padding:3px 10px;border-radius:20px;
+}
+.modulo-badge.nuevo{background:#d1fae5;color:#065f46;}
+.modulo-card.activo{border-color:var(--azul-oscuro);}
+
+/* ── ADMIN ── */
+#pantalla-admin{flex-direction:column;}
+.admin-cuerpo{flex:1;padding:32px 28px;}
+.admin-tabs{display:flex;gap:10px;margin-bottom:24px;flex-wrap:wrap;}
+.admin-tab{
+  background:white;border:1.5px solid var(--gris-borde);border-radius:10px;
+  padding:10px 20px;cursor:pointer;font-weight:600;font-size:.9rem;color:#374151;
+}
+.admin-tab.activo{background:var(--azul-oscuro);color:white;border-color:var(--azul-oscuro);}
+.admin-panel{display:none;}
+.admin-panel.activo{display:block;}
+.tabla-usuarios{width:100%;border-collapse:collapse;background:white;border-radius:12px;overflow:hidden;box-shadow:var(--sombra);}
+.tabla-usuarios th{background:var(--azul-oscuro);color:white;padding:12px 16px;text-align:left;font-size:.88rem;}
+.tabla-usuarios td{padding:12px 16px;border-bottom:1px solid var(--gris-borde);font-size:.9rem;}
+.tabla-usuarios tr:last-child td{border-bottom:none;}
+.tabla-usuarios tr:hover td{background:#f8fafc;}
+.rol-badge{display:inline-block;padding:3px 12px;border-radius:20px;font-size:.78rem;font-weight:700;}
+.rol-admin{background:#fef2f2;color:#dc2626;}
+.rol-supervisor{background:#fefce8;color:#854d0e;}
+.rol-tecnico{background:#f0fdf4;color:#14532d;}
+.btn-accion{border:none;border-radius:7px;padding:6px 12px;cursor:pointer;font-size:.82rem;font-weight:600;}
+.btn-editar{background:#dbeafe;color:#1d4ed8;}
+.btn-eliminar{background:#fee2e2;color:#dc2626;}
+.form-nuevo-usuario{background:white;border-radius:12px;border:1.5px solid var(--gris-borde);padding:24px;max-width:500px;margin-bottom:20px;}
+.form-nuevo-usuario h3{color:var(--azul-oscuro);font-weight:700;margin-bottom:18px;}
+.fu-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;}
+.fu-field label{display:block;font-size:.83rem;font-weight:600;color:var(--gris-texto);margin-bottom:5px;}
+.fu-field input,.fu-field select{width:100%;padding:9px 12px;border:1.5px solid var(--gris-borde);border-radius:8px;font-size:.88rem;}
+.btn-crear-usuario{background:var(--azul-oscuro);color:white;border:none;border-radius:8px;padding:11px 22px;font-weight:700;cursor:pointer;}
+.trazabilidad-lista{display:flex;flex-direction:column;gap:10px;}
+.trazo-item{background:white;border-radius:10px;border-left:4px solid var(--azul-claro);padding:14px 18px;box-shadow:var(--sombra);}
+.trazo-item.supervisor{border-color:var(--amarillo);}
+.trazo-item.tecnico{border-color:var(--verde);}
+.trazo-fecha{font-size:.8rem;color:var(--gris-texto);}
+.trazo-accion{font-size:.92rem;font-weight:600;color:#1f2937;margin:3px 0;}
+.trazo-usuario{font-size:.83rem;color:var(--azul-medio);}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:24px;}
+.kpi-card{background:white;border-radius:12px;padding:20px;text-align:center;box-shadow:var(--sombra);}
+.kpi-num{font-size:2rem;font-weight:800;color:var(--azul-oscuro);}
+.kpi-label{font-size:.83rem;color:var(--gris-texto);margin-top:4px;}
+
+/* ── NOTIF ── */
+.notif{
+  position:fixed;top:20px;right:20px;background:var(--verde);color:white;
+  border-radius:10px;padding:13px 20px;font-weight:600;font-size:.9rem;
+  box-shadow:0 6px 20px rgba(0,0,0,.2);z-index:999;display:none;
+  animation:slideIn .3s ease;
+}
+@keyframes slideIn{from{transform:translateX(120%);}to{transform:translateX(0);}}
+</style>
+
+<div class="notif" id="notif"></div>
+
+<!-- ═══ LOGIN ═══ -->
+<div class="pantalla activa" id="pantalla-login" style="flex-direction:column;">
+  <div class="login-card" style="margin:auto;">
+    <div class="login-logo">
+      <div class="login-escudo">🛡️</div>
+      <h1>Sistema de Inspección de<br>Equipos de Seguridad</h1>
+      <p>SVG · Seguridad, Salud y Gestión</p>
+    </div>
+    <div class="login-field">
+      <label>Usuario</label>
+      <input type="text" id="inp-usuario" placeholder="Ingresa tu usuario" autocomplete="off">
+    </div>
+    <div class="login-field">
+      <label>Contraseña</label>
+      <input type="password" id="inp-password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <button class="btn-login" onclick="doLogin()">Iniciar Sesión</button>
+    <div class="error-msg" id="error-login">Usuario o contraseña incorrectos.</div>
+    <div style="margin-top:20px;background:#f0f9ff;border-radius:10px;padding:14px 16px;font-size:.82rem;color:#0369a1;line-height:1.6;">
+      <strong>Cuentas de demo:</strong><br>
+      admin / admin123 → Administrador<br>
+      supervisor1 / sup123 → Supervisor<br>
+      tecnico1 / tec123 → Técnico
+    </div>
+  </div>
+</div>
+
+<!-- ═══ SELECCIÓN DE CLIENTE ═══ -->
+<div class="pantalla" id="pantalla-cliente" style="flex-direction:column;">
+  <div class="app-header">
+    <div class="app-header-izq">
+      <div>
+        <div class="app-header h1" style="font-size:1.05rem;font-weight:700;">Sistema de Inspección SST</div>
+        <div style="font-size:.8rem;opacity:.8;">Seleccione el cliente a inspeccionar</div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <span class="badge-rol" id="badge-rol-cli"></span>
+      <span style="font-size:.88rem;opacity:.85;" id="nombre-usuario-cli"></span>
+      <button class="btn-salir" onclick="cerrarSesion()">Salir</button>
+    </div>
+  </div>
+  <div class="cliente-cuerpo">
+    <h2>Selecciona el Cliente</h2>
+    <p>Haz clic en un cliente para configurar la inspección</p>
+    <div class="clientes-grid" id="clientes-grid"></div>
+
+    <div class="meta-box" id="meta-box" style="display:none;">
+      <h3>📋 Datos de la Inspección — <span id="meta-cliente-nombre"></span></h3>
+      <div class="meta-grid-2">
+        <div class="meta-field">
+          <label>Código SHK</label>
+          <input type="text" id="meta-codigo" readonly>
+        </div>
+        <div class="meta-field">
+          <label>Cliente</label>
+          <input type="text" id="meta-cliente" readonly>
+        </div>
+        <div class="meta-field">
+          <label>Sede / Proceso</label>
+          <input type="text" id="meta-sede" placeholder="Ej: Planta Principal, Almacén 1...">
+        </div>
+        <div class="meta-field">
+          <label>Fecha de Inspección</label>
+          <input type="date" id="meta-fecha">
+        </div>
+        <div class="meta-field" style="grid-column:span 2;">
+          <label>Código de Formato</label>
+          <input type="text" id="meta-codigo-formato" readonly>
+          <div class="info-codigo">ℹ️ Se genera automáticamente — número único correlativo por inspección</div>
+        </div>
+      </div>
+      <button class="btn-continuar" id="btn-continuar" onclick="irAModulos()" disabled>Continuar a Módulos →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MÓDULOS ═══ -->
+<div class="pantalla" id="pantalla-modulos" style="flex-direction:column;">
+  <div class="app-header">
+    <div class="app-header-izq">
+      <button class="btn-volver" onclick="irAClientes()">← Volver</button>
+      <div>
+        <div style="font-size:1.05rem;font-weight:700;">Módulos de Inspección</div>
+        <div style="font-size:.8rem;opacity:.8;" id="header-cliente-modulos"></div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <span class="badge-rol" id="badge-rol-mod"></span>
+      <span style="font-size:.88rem;opacity:.85;" id="nombre-usuario-mod"></span>
+      <button class="btn-salir" onclick="cerrarSesion()">Salir</button>
+    </div>
+  </div>
+  <div class="modulos-cuerpo">
+    <div class="cliente-banner">
+      <div class="cliente-banner-info">
+        <h3 id="banner-cliente-nombre"></h3>
+        <p id="banner-sede"></p>
+      </div>
+      <div class="cliente-banner-meta">
+        <div class="meta-chip"><span>Código SHK</span><strong id="banner-codigo"></strong></div>
+        <div class="meta-chip"><span>Fecha</span><strong id="banner-fecha"></strong></div>
+        <div class="meta-chip"><span>Formato</span><strong id="banner-formato"></strong></div>
+        <div class="meta-chip"><span>Inspector</span><strong id="banner-inspector"></strong></div>
+      </div>
+    </div>
+    <h2 style="color:var(--azul-oscuro);margin-bottom:6px;font-size:1.15rem;">Selecciona el Módulo de Inspección</h2>
+    <p style="color:var(--gris-texto);font-size:.9rem;margin-bottom:22px;">Todos los módulos comparten el cliente y datos de esta sesión</p>
+    <div class="modulos-grid">
+      <div class="modulo-card activo" onclick="abrirModuloExtintores()">
+        <div class="modulo-badge activo">Activo</div>
+        <div class="modulo-icono">🧯</div>
+        <div class="modulo-nombre">Extintores Portátiles</div>
+        <div class="modulo-desc">Inspección de EEP, anomalías, manómetros, fechas de carga y PH</div>
+      </div>
+      <div class="modulo-card" onclick="notif('Módulo en desarrollo próximamente','warn')">
+        <div class="modulo-badge nuevo" style="background:#fef3c7;color:#92400e;">Próximo</div>
+        <div class="modulo-icono">🚒</div>
+        <div class="modulo-nombre">Equipos Contra Incendio</div>
+        <div class="modulo-desc">Gabinetes, mangueras, rociadores y detectores de humo</div>
+      </div>
+      <div class="modulo-card" onclick="notif('Módulo en desarrollo próximamente','warn')">
+        <div class="modulo-badge nuevo" style="background:#fef3c7;color:#92400e;">Próximo</div>
+        <div class="modulo-icono">🦺</div>
+        <div class="modulo-nombre">EPP Personal</div>
+        <div class="modulo-desc">Cascos, arneses, lentes, guantes y equipos de protección individual</div>
+      </div>
+      <div class="modulo-card" onclick="notif('Módulo en desarrollo próximamente','warn')">
+        <div class="modulo-badge nuevo" style="background:#fef3c7;color:#92400e;">Próximo</div>
+        <div class="modulo-icono">⚡</div>
+        <div class="modulo-nombre">Instalaciones Eléctricas</div>
+        <div class="modulo-desc">Tableros, pozos a tierra, interruptores y puntos de fuerza</div>
+      </div>
+      <div class="modulo-card" onclick="notif('Módulo en desarrollo próximamente','warn')">
+        <div class="modulo-badge nuevo" style="background:#fef3c7;color:#92400e;">Próximo</div>
+        <div class="modulo-icono">🚪</div>
+        <div class="modulo-nombre">Señalización y Evacu.</div>
+        <div class="modulo-desc">Señales de seguridad, rutas de evacuación y puntos de reunión</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ ADMIN ═══ -->
+<div class="pantalla" id="pantalla-admin" style="flex-direction:column;">
+  <div class="app-header">
+    <div class="app-header-izq">
+      <div>
+        <div style="font-size:1.05rem;font-weight:700;">Panel de Administración</div>
+        <div style="font-size:.8rem;opacity:.8;">Gestión de usuarios, accesos y trazabilidad</div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <span class="badge-rol badge-admin">Administrador</span>
+      <span style="font-size:.88rem;opacity:.85;" id="nombre-usuario-admin"></span>
+      <button class="btn-salir" onclick="cerrarSesion()">Salir</button>
+    </div>
+  </div>
+  <div class="admin-cuerpo">
+    <div class="kpi-grid">
+      <div class="kpi-card"><div class="kpi-num" id="kpi-total-usuarios">0</div><div class="kpi-label">Usuarios totales</div></div>
+      <div class="kpi-card"><div class="kpi-num" id="kpi-supervisores">0</div><div class="kpi-label">Supervisores</div></div>
+      <div class="kpi-card"><div class="kpi-num" id="kpi-tecnicos">0</div><div class="kpi-label">Técnicos</div></div>
+      <div class="kpi-card"><div class="kpi-num" id="kpi-inspecciones">0</div><div class="kpi-label">Inspecciones registradas</div></div>
+    </div>
+
+    <div class="admin-tabs">
+      <button class="admin-tab activo" onclick="switchAdminTab('usuarios',this)">👥 Usuarios</button>
+      <button class="admin-tab" onclick="switchAdminTab('trazabilidad',this)">📋 Trazabilidad</button>
+      <button class="admin-tab" onclick="switchAdminTab('nuevo',this)">➕ Crear Usuario</button>
+    </div>
+
+    <div class="admin-panel activo" id="admin-usuarios">
+      <table class="tabla-usuarios" id="tabla-usuarios">
+        <thead><tr><th>Usuario</th><th>Nombre</th><th>Rol</th><th>Último acceso</th><th>Acciones</th></tr></thead>
+        <tbody id="tbody-usuarios"></tbody>
+      </table>
+    </div>
+
+    <div class="admin-panel" id="admin-trazabilidad">
+      <div class="trazabilidad-lista" id="lista-trazabilidad"></div>
+    </div>
+
+    <div class="admin-panel" id="admin-nuevo">
+      <div class="form-nuevo-usuario">
+        <h3>Crear nuevo usuario</h3>
+        <div class="fu-grid">
+          <div class="fu-field"><label>Usuario (login)</label><input type="text" id="nu-usuario" placeholder="ej: tecnico2"></div>
+          <div class="fu-field"><label>Contraseña</label><input type="password" id="nu-password" placeholder="mínimo 6 chars"></div>
+          <div class="fu-field"><label>Nombre completo</label><input type="text" id="nu-nombre" placeholder="Juan Pérez"></div>
+          <div class="fu-field"><label>Rol</label>
+            <select id="nu-rol">
+              <option value="supervisor">Supervisor</option>
+              <option value="tecnico">Técnico</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn-crear-usuario" onclick="crearUsuario()">Crear Usuario</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ========== USUARIOS Y DATOS ==========
+const USUARIOS = [
+  {id:1,usuario:"admin",password:"admin123",nombre:"Administrador SVG",rol:"admin",ultimoAcceso:"2025-05-24 09:12"},
+  {id:2,usuario:"supervisor1",password:"sup123",nombre:"Carlos Ramírez",rol:"supervisor",ultimoAcceso:"2025-05-23 14:30"},
+  {id:3,usuario:"tecnico1",password:"tec123",nombre:"María Torres",rol:"tecnico",ultimoAcceso:"2025-05-24 08:45"},
+  {id:4,usuario:"supervisor2",password:"sup456",nombre:"Luis Mendoza",rol:"supervisor",ultimoAcceso:"2025-05-22 11:00"},
+];
+
+const CLIENTES = {
+  "100":"Siviack","101":"CCH","102":"QARA","103":"4OS","104":"UTM",
+  "105":"SDB","106":"KDC","107":"NTM","108":"NGT","109":"CSC","110":"SSR"
+};
+
+let contadorInspecciones = 47;
+
+const TRAZABILIDAD = [
+  {fecha:"2025-05-24 09:05",usuario:"supervisor1",rol:"supervisor",accion:"Inspección registrada — Cliente: Siviack (100) — EEP: EXT-001"},
+  {fecha:"2025-05-24 08:50",usuario:"tecnico1",rol:"tecnico",accion:"Inicio de sesión exitoso"},
+  {fecha:"2025-05-23 16:22",usuario:"supervisor1",rol:"supervisor",accion:"Exportó informe PDF — Cliente: SDB (105)"},
+  {fecha:"2025-05-23 14:35",usuario:"supervisor2",rol:"supervisor",accion:"Inspección registrada — Cliente: CCH (101) — EEP: EXT-003"},
+  {fecha:"2025-05-23 10:00",usuario:"tecnico1",rol:"tecnico",accion:"Inspección registrada — Cliente: QARA (102) — EEP: EXT-007"},
+];
+
+let sesion = null;
+let clienteSeleccionado = null;
+
+// ========== PERSISTENCIA DE SESIÓN ==========
+function guardarSesionEnStorage(user) {
+  localStorage.setItem('sesion_activa', JSON.stringify({
+    id: user.id,
+    usuario: user.usuario,
+    nombre: user.nombre,
+    rol: user.rol,
+    ultimoAcceso: user.ultimoAcceso,
+    timestamp: Date.now()
+  }));
+}
+
+function recuperarSesionStorage() {
+  const guardada = localStorage.getItem('sesion_activa');
+  if (!guardada) return null;
+  
+  const sesionData = JSON.parse(guardada);
+  const usuarioCompleto = USUARIOS.find(u => u.usuario === sesionData.usuario);
+  if (usuarioCompleto) {
+    return usuarioCompleto;
+  }
+  return null;
+}
+
+function limpiarSesionStorage() {
+  localStorage.removeItem('sesion_activa');
+  localStorage.removeItem('datosInspeccion');
+}
+
+// ========== FUNCIONES PRINCIPALES ==========
+function pantalla(id){
+  document.querySelectorAll('.pantalla').forEach(p=>p.classList.remove('activa'));
+  document.getElementById('pantalla-'+id).classList.add('activa');
+}
+
+function doLogin(){
+  const u = document.getElementById('inp-usuario').value.trim();
+  const p = document.getElementById('inp-password').value;
+  const err = document.getElementById('error-login');
+  const user = USUARIOS.find(x=>x.usuario===u && x.password===p);
+  if(!user){ err.style.display='block'; return; }
+  err.style.display='none';
+  sesion = user;
+  
+  // Guardar en localStorage
+  guardarSesionEnStorage(user);
+  
+  registrarTrazabilidad(user.usuario, user.rol, 'Inicio de sesión exitoso');
+  if(user.rol==='admin'){ irAAdmin(); }
+  else { irAClientes(); }
+}
+
+function irAAdmin(){
+  document.getElementById('nombre-usuario-admin').textContent = sesion.nombre;
+  actualizarKPIs();
+  renderTablaUsuarios();
+  renderTrazabilidad();
+  pantalla('admin');
+}
+
+function irAClientes(){
+  // Limpiar parámetros de URL
+  window.history.replaceState({}, document.title, window.location.pathname);
+  
+  document.getElementById('badge-rol-cli').textContent = rolTexto(sesion.rol);
+  document.getElementById('badge-rol-cli').className = 'badge-rol badge-'+sesion.rol;
+  document.getElementById('nombre-usuario-cli').textContent = sesion.nombre;
+  renderClientesGrid();
+  pantalla('cliente');
+}
+
+function irAModulos(){
+  const sede = document.getElementById('meta-sede').value.trim();
+  if(!sede){ notif('Ingresa la sede / proceso','warn'); return; }
+  const fecha = document.getElementById('meta-fecha').value;
+  if(!fecha){ notif('Selecciona la fecha de inspección','warn'); return; }
+
+  document.getElementById('header-cliente-modulos').textContent =
+    CLIENTES[clienteSeleccionado]+' ('+clienteSeleccionado+') · '+sede;
+  document.getElementById('badge-rol-mod').textContent = rolTexto(sesion.rol);
+  document.getElementById('badge-rol-mod').className = 'badge-rol badge-'+sesion.rol;
+  document.getElementById('nombre-usuario-mod').textContent = sesion.nombre;
+  document.getElementById('banner-cliente-nombre').textContent = CLIENTES[clienteSeleccionado];
+  document.getElementById('banner-sede').textContent = sede;
+  document.getElementById('banner-codigo').textContent = clienteSeleccionado;
+  document.getElementById('banner-fecha').textContent = fecha;
+  document.getElementById('banner-formato').textContent = document.getElementById('meta-codigo-formato').value;
+  document.getElementById('banner-inspector').textContent = sesion.nombre;
+
+  registrarTrazabilidad(sesion.usuario, sesion.rol,
+    'Inicio de inspección — Cliente: '+CLIENTES[clienteSeleccionado]+' ('+clienteSeleccionado+') — Sede: '+sede);
+
+  pantalla('modulos');
+}
+
+function renderClientesGrid(){
+  const g = document.getElementById('clientes-grid');
+  g.innerHTML = '';
+  Object.entries(CLIENTES).forEach(([cod,nom])=>{
+    const d = document.createElement('div');
+    d.className = 'cliente-card';
+    d.innerHTML = `<span class="cliente-codigo">${cod}</span><div class="cliente-nombre">${nom}</div>`;
+    d.onclick = (e)=>seleccionarCliente(cod,nom,e);
+    g.appendChild(d);
+  });
+}
+
+function seleccionarCliente(cod,nom,event){
+  clienteSeleccionado = cod;
+  document.querySelectorAll('.cliente-card').forEach(c=>{
+    c.style.borderColor='';
+    c.style.boxShadow='';
+  });
+  event.currentTarget.style.borderColor='var(--azul-claro)';
+  event.currentTarget.style.boxShadow='var(--sombra)';
+
+  contadorInspecciones++;
+  const numFormato = String(contadorInspecciones).padStart(4,'0');
+  const hoy = new Date().toISOString().split('T')[0];
+
+  document.getElementById('meta-codigo').value = cod;
+  document.getElementById('meta-cliente').value = nom;
+  document.getElementById('meta-fecha').value = hoy;
+  document.getElementById('meta-codigo-formato').value = `FO-UIG-DIN-GO-OS-${numFormato}`;
+  document.getElementById('meta-cliente-nombre').textContent = nom;
+  document.getElementById('meta-sede').value = '';
+
+  const box = document.getElementById('meta-box');
+  box.style.display='block';
+
+  const btn = document.getElementById('btn-continuar');
+  btn.disabled = false;
+
+  document.getElementById('meta-sede').oninput = ()=>{
+    btn.disabled = !document.getElementById('meta-sede').value.trim();
+  };
+  btn.disabled = true;
+
+  box.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+function renderTablaUsuarios(){
+  const tbody = document.getElementById('tbody-usuarios');
+  tbody.innerHTML = '';
+  USUARIOS.filter(u=>u.rol!=='admin').forEach(u=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><strong>${u.usuario}</strong></td>
+      <td>${u.nombre}</td>
+      <td><span class="rol-badge rol-${u.rol}">${rolTexto(u.rol)}</span></td>
+      <td>${u.ultimoAcceso}</td>
+      <td>
+        <button class="btn-accion btn-editar" onclick="notif('Edición de usuario en construcción','info')">Editar</button>
+        <button class="btn-accion btn-eliminar" onclick="notif('Eliminación desactivada en demo','warn')" style="margin-left:6px;">Eliminar</button>
+      </td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function renderTrazabilidad(){
+  const lista = document.getElementById('lista-trazabilidad');
+  lista.innerHTML = '';
+  TRAZABILIDAD.forEach(t=>{
+    const d = document.createElement('div');
+    d.className = 'trazo-item '+t.rol;
+    d.innerHTML = `
+      <div class="trazo-fecha">🕐 ${t.fecha}</div>
+      <div class="trazo-accion">${t.accion}</div>
+      <div class="trazo-usuario">👤 ${t.usuario} · <span class="rol-badge rol-${t.rol}">${rolTexto(t.rol)}</span></div>`;
+    lista.appendChild(d);
+  });
+}
+
+function actualizarKPIs(){
+  const sups = USUARIOS.filter(u=>u.rol==='supervisor').length;
+  const tecs = USUARIOS.filter(u=>u.rol==='tecnico').length;
+  document.getElementById('kpi-total-usuarios').textContent = USUARIOS.filter(u=>u.rol!=='admin').length;
+  document.getElementById('kpi-supervisores').textContent = sups;
+  document.getElementById('kpi-tecnicos').textContent = tecs;
+  document.getElementById('kpi-inspecciones').textContent = contadorInspecciones;
+}
+
+function crearUsuario(){
+  const u = document.getElementById('nu-usuario').value.trim();
+  const p = document.getElementById('nu-password').value;
+  const n = document.getElementById('nu-nombre').value.trim();
+  const r = document.getElementById('nu-rol').value;
+  if(!u||!p||!n){ notif('Completa todos los campos','warn'); return; }
+  if(p.length<6){ notif('La contraseña debe tener al menos 6 caracteres','warn'); return; }
+  if(USUARIOS.find(x=>x.usuario===u)){ notif('Ya existe un usuario con ese nombre','warn'); return; }
+  const nuevoId = USUARIOS.length+1;
+  USUARIOS.push({id:nuevoId,usuario:u,password:p,nombre:n,rol:r,ultimoAcceso:'—'});
+  registrarTrazabilidad('admin','admin','Creó usuario: '+u+' ('+rolTexto(r)+')');
+  document.getElementById('nu-usuario').value='';
+  document.getElementById('nu-password').value='';
+  document.getElementById('nu-nombre').value='';
+  actualizarKPIs();
+  renderTablaUsuarios();
+  notif('Usuario '+u+' creado correctamente ✓');
+  switchAdminTab('usuarios', document.querySelector('.admin-tab'));
+}
+
+function registrarTrazabilidad(usuario,rol,accion){
+  const ahora = new Date();
+  const fecha = ahora.toISOString().slice(0,16).replace('T',' ');
+  TRAZABILIDAD.unshift({fecha,usuario,rol,accion});
+}
+
+function switchAdminTab(id,btn){
+  document.querySelectorAll('.admin-tab').forEach(t=>t.classList.remove('activo'));
+  document.querySelectorAll('.admin-panel').forEach(p=>p.classList.remove('activo'));
+  btn.classList.add('activo');
+  document.getElementById('admin-'+id).classList.add('activo');
+  if(id==='trazabilidad') renderTrazabilidad();
+}
+
+function cerrarSesion(){
+  sesion=null; 
+  clienteSeleccionado=null;
+  limpiarSesionStorage();
+  document.getElementById('inp-usuario').value='';
+  document.getElementById('inp-password').value='';
+  document.getElementById('meta-box').style.display='none';
+  window.history.replaceState({}, document.title, window.location.pathname);
+  pantalla('login');
+}
+
+function rolTexto(r){
+  return {admin:'Administrador',supervisor:'Supervisor',tecnico:'Técnico'}[r]||r;
+}
+
+let notifTimer;
+function notif(msg, tipo='ok'){
+  const el = document.getElementById('notif');
+  el.textContent = msg;
+  el.style.background = tipo==='warn'?'var(--amarillo)':tipo==='info'?'var(--azul-claro)':'var(--verde)';
+  el.style.display='block';
+  clearTimeout(notifTimer);
+  notifTimer = setTimeout(()=>el.style.display='none',3000);
+}
+
+function abrirModuloExtintores() {
+  const datosSesion = {
+    usuario: sesion.usuario,
+    nombre: sesion.nombre,
+    rol: sesion.rol,
+    codigoSHK: clienteSeleccionado,
+    cliente: CLIENTES[clienteSeleccionado],
+    sede: document.getElementById('meta-sede').value,
+    fecha: document.getElementById('meta-fecha').value,
+    codigoFormato: document.getElementById('meta-codigo-formato').value
+  };
+
+  localStorage.setItem("datosInspeccion", JSON.stringify(datosSesion));
+  window.location.href = "index.html";
+}
+
+// ========== REDIRECCIÓN DESDE MÓDULO ==========
+function verificarRedireccion() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const mostrar = urlParams.get('mostrar');
+  
+  // Recuperar sesión si no existe
+  if (!sesion) {
+    sesion = recuperarSesionStorage();
+  }
+  
+  // Si no hay sesión, no hacemos nada (mostrar login)
+  if (!sesion) return;
+  
+  // Si hay sesión y pide mostrar clientes
+  if (mostrar === 'clientes') {
+    irAClientes();
+  }
+}
+
+// ========== INICIALIZACIÓN ==========
+document.addEventListener('DOMContentLoaded', () => {
+  // Recuperar sesión al cargar
+  sesion = recuperarSesionStorage();
+  
+  // Si hay sesión activa, redirigir a clientes automáticamente
+  if (sesion && document.getElementById('pantalla-login').classList.contains('activa')) {
+    if (sesion.rol === 'admin') {
+      irAAdmin();
+    } else {
+      irAClientes();
+    }
+  }
+  
+  // Verificar redirección desde módulo
+  verificarRedireccion();
+});
+</script>
