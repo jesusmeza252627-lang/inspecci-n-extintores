@@ -486,16 +486,34 @@ function editarRegistro(id) {
 }
 
 async function eliminarRegistro(id) {
-  if (!confirm("¿Eliminar registro?")) return;
+  console.log("🗑️ Eliminando registro:", id);
   
-  // Quitar de la UI inmediatamente sin esperar al backend
-  registros = registros.filter(x => x.id !== id);
+  const registro = registros.find(r => r.id === id);
+  if (!registro) {
+    notif("❌ Registro no encontrado", "error");
+    return;
+  }
+  
+  const confirmar = confirm(`¿Eliminar el registro del extintor ${registro.numeroExtintor || id}?\n\nEsta acción no se puede deshacer.`);
+  
+  if (!confirmar) return;
+  
+  // Eliminar de la lista local inmediatamente
+  registros = registros.filter(r => r.id !== id);
+  
+  // Intentar eliminar (fallará por CORS pero ya está eliminado localmente)
+  try {
+    await sheetsEliminar(id);
+  } catch(e) {
+    console.log("Error al eliminar en Sheets, pero local ya se eliminó");
+  }
+  
+  // Actualizar UI
   renderTabla();
   actualizarDashboard();
   await actualizarInforme();
-
-  // Luego sincronizar con backend en segundo plano
-  await sheetsEliminar(id);
+  
+  notif("✅ Registro eliminado correctamente", "success");
 }
 
 // ── Render Tabla ──

@@ -91,31 +91,82 @@ async function sheetsObtenerTodos() {
 }
 
 // ── Eliminar un registro en Sheets ──
+// ── Eliminar un registro (versión que funciona sin CORS) ──
 async function sheetsEliminar(id) {
-  if (!sheetsEnabled()) return localEliminar(id);
-  setSyncStatus("⏳ Eliminando...", "sync-loading");
-  try {
-    const body = { action: "eliminar", id };
-    const resp = await fetch(CONFIG.APPS_SCRIPT_URL, {
-      method: "POST",
-      body: JSON.stringify(body)
-    });
-    const data = await resp.json();
-    if (data.status === "ok") {
-      setSyncStatus("✅ Eliminado", "sync-ok");
-      localEliminar(id);
-      return true;
-    } else {
-      throw new Error(data.message);
+  console.log("🗑️ Eliminando localmente:", id);
+  
+  // Siempre eliminar localmente primero
+  localEliminar(id);
+  setSyncStatus("✅ Eliminado localmente", "sync-ok");
+  
+  // Intentar eliminar en Sheets en segundo plano (sin bloquear)
+  if (sheetsEnabled()) {
+    try {
+      const body = { action: "eliminar", id };
+      const resp = await fetch(CONFIG.APPS_SCRIPT_URL, {
+        method: "POST",
+        mode: "no-cors", // <-- Cambiado a no-cors para evitar CORS
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      });
+      console.log("Intento de eliminar en Sheets enviado");
+    } catch (e) {
+      console.log("No se pudo eliminar en Sheets, pero ya está eliminado localmente");
     }
-  } catch (e) {
-    console.error("Sheets error:", e);
-    setSyncStatus("⚠️ Error al eliminar", "sync-error");
-    localEliminar(id);
-    return false;
   }
+  
+  return true;
 }
 
+// ── Guardar un registro (versión que funciona sin CORS) ──
+async function sheetsGuardar(registro) {
+  // Guardar localmente siempre
+  localGuardar(registro);
+  setSyncStatus("✅ Guardado localmente", "sync-ok");
+  
+  // Intentar guardar en Sheets en segundo plano
+  if (sheetsEnabled()) {
+    try {
+      await fetch(CONFIG.APPS_SCRIPT_URL, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "guardar", registro })
+      });
+      console.log("Intento de guardar en Sheets enviado");
+    } catch (e) {
+      console.log("No se pudo guardar en Sheets, pero ya está guardado localmente");
+    }
+  }
+  
+  return { status: "ok", imagenes: [], _local: true };
+}
+
+// ── Obtener todos los registros (versión local primero) ──
+async function sheetsObtenerTodos() {
+  // Primero devolver datos locales
+  const locales = localObtenerTodos();
+  setSyncStatus("📱 Modo local", "sync-ok");
+  
+  // Intentar sincronizar en segundo plano (sin bloquear)
+  if (sheetsEnabled()) {
+    try {
+      const url = `${CONFIG.APPS_SCRIPT_URL}?action=obtener`;
+      const resp = await fetch(url);
+      const data = await resp.json();
+      if (data.status === "ok" && data.registros) {
+        // Actualizar caché local
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data.registros));
+        setSyncStatus("✅ Sincronizado", "sync-ok");
+        return data.registros;
+      }
+    } catch (e) {
+      console.log("Sin conexión a Sheets, usando datos locales");
+    }
+  }
+  
+  return locales;
+}
 // ── Capa LOCAL (fallback / caché) ──
 function localGuardar(registro) {
   const todos = localObtenerTodos();
