@@ -346,6 +346,7 @@ function limpiarFormulario() {
   document.getElementById("ubicacion").value = "";
   document.getElementById("referencia").value = "";
   document.getElementById("zonaRiesgo").value = "";
+  cambiarColorRiesgo(document.getElementById("zonaRiesgo"));
   document.getElementById("fechaCarga").value = "";
   document.getElementById("pruebaHidrostatica").value = "";
   document.getElementById("observaciones").value = "";
@@ -377,6 +378,7 @@ function editarRegistro(id) {
   document.getElementById("unidadCapacidad").value = capacidadSplit[1] || "";
   document.getElementById("ubicacion").value = r.ubicacion;
   document.getElementById("referencia").value = r.referencia;
+  document.getElementById("zonaRiesgo").value = r.zonaRiesgo;
   cambiarColorRiesgo(document.getElementById("zonaRiesgo"));
   document.getElementById("fechaCarga").value = r.fechaCarga;
   document.getElementById("pruebaHidrostatica").value = r.pruebaHidrostatica;
