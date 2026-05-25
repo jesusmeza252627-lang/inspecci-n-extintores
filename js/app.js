@@ -221,6 +221,26 @@ async function getFormulario() {
   return reg;
 }
 
+function cambiarColorRiesgo(select){
+
+  if(select.value==="Alta"){
+    select.style.background="#dc2626";
+    select.style.color="white";
+  }
+  else if(select.value==="Media"){
+    select.style.background="#facc15";
+    select.style.color="black";
+  }
+  else if(select.value==="Baja"){
+    select.style.background="#16a34a";
+    select.style.color="white";
+  }
+  else{
+    select.style.background="white";
+    select.style.color="black";
+  }
+}
+
 // ── GUARDAR ──
 async function guardarRegistro() {
 
@@ -332,7 +352,7 @@ function editarRegistro(id) {
   document.getElementById("unidadCapacidad").value = capacidadSplit[1] || "";
   document.getElementById("ubicacion").value = r.ubicacion;
   document.getElementById("referencia").value = r.referencia;
-  document.getElementById("zonaRiesgo").value = r.zonaRiesgo;
+  cambiarColorRiesgo(document.getElementById("zonaRiesgo"));
   document.getElementById("fechaCarga").value = r.fechaCarga;
   document.getElementById("pruebaHidrostatica").value = r.pruebaHidrostatica;
   document.getElementById("observaciones").value = r.observaciones;

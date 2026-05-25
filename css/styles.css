@@ -261,3 +261,18 @@ td.left{text-align:left;}
   page-break-inside: avoid;
   break-inside: avoid;
 }
+
+#zonaRiesgo option:nth-child(2){
+  background:#dc2626;
+  color:white;
+}
+
+#zonaRiesgo option:nth-child(3){
+  background:#facc15;
+  color:black;
+}
+
+#zonaRiesgo option:nth-child(4){
+  background:#16a34a;
+  color:white;
+}
