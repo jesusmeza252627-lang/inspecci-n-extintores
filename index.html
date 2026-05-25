@@ -115,12 +115,13 @@
         </div>
 
         <div class="field">
-          <select id="zonaRiesgo" onchange="cambiarColorRiesgo(this)">
+          <label>Zona de riesgo de incendio</label>
+            <select id="zonaRiesgo">
               <option value="">Seleccione</option>
-              <option value="Alta">Alta</option>
-              <option value="Media">Media</option>
-              <option value="Baja">Baja</option>
-          </select>
+              <option style="background:red;color:white;">Alta</option>
+              <option style="background:yellow;">Media</option>
+              <option style="background:green;color:white;">Baja</option>
+            </select>
         </div>
 
         <div class="field">
