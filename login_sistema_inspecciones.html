@@ -202,87 +202,45 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:var(--gris-fondo);min-he
 }
 @keyframes slideIn{from{transform:translateX(120%);}to{transform:translateX(0);}}
 
-/* ========== RESPONSIVE SOLO PARA LOGIN EN MÓVIL ========== */
+/* ========== RESPONSIVE SOLO TAMAÑO LOGIN EN MÓVIL ========== */
+/* Esto NO cambia tus colores, solo hace el login más grande en celular */
 
-/* Tablets y celulares grandes */
 @media (max-width: 768px) {
   .login-card {
-    width: 90vw;
-    max-width: 400px;
-    padding: 32px 24px;
+    width: 95vw;           /* ← más ancho */
+    max-width: 450px;      /* ← límite */
+    padding: 32px 24px;    /* ← más espacio interno */
     margin: 16px;
   }
   
   .login-logo h1 {
-    font-size: 1.1rem;
+    font-size: 1.1rem;     /* ← título un poco más grande */
+  }
+  
+  .login-field input,
+  .login-field select {
+    padding: 12px 14px;    /* ← inputs más altos */
+    font-size: 16px;       /* ← evita zoom en iOS */
+  }
+  
+  .btn-login {
+    padding: 14px;         /* ← botón más alto */
+  }
+}
+
+@media (max-width: 480px) {
+  .login-card {
+    padding: 28px 20px;    /* ← más padding */
+    width: 95vw;           /* ← casi toda la pantalla */
   }
   
   .login-escudo {
     width: 55px;
     height: 55px;
-    font-size: 24px;
-  }
-  
-  .login-field input,
-  .login-field select {
-    padding: 10px 14px;
-    font-size: 16px; /* Evita que el zoom automático en iOS */
-  }
-  
-  .btn-login {
-    padding: 12px;
-    font-size: 0.95rem;
-  }
-  
-  .login-field label {
-    font-size: 0.85rem;
-  }
-}
-
-/* Celulares pequeños (menos de 480px) */
-@media (max-width: 480px) {
-  .login-card {
-    padding: 24px 20px;
-    width: 92vw;
   }
   
   .login-logo h1 {
-    font-size: 0.95rem;
-  }
-  
-  .login-logo p {
-    font-size: 0.75rem;
-  }
-  
-  .login-escudo {
-    width: 45px;
-    height: 45px;
-    font-size: 20px;
-  }
-  
-  .login-field {
-    margin-bottom: 16px;
-  }
-  
-  .login-field input,
-  .login-field select {
-    padding: 10px 12px;
-  }
-  
-  .btn-login {
-    padding: 10px;
-    font-size: 0.9rem;
-  }
-  
-  .error-msg {
-    font-size: 0.75rem;
-    padding: 8px 12px;
-  }
-  
-  /* El bloque de cuentas demo */
-  .login-card > div:last-child {
-    padding: 10px 12px !important;
-    font-size: 0.7rem !important;
+    font-size: 1rem;
   }
 }
 
