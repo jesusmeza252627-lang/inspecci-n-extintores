@@ -2187,16 +2187,19 @@ function mostrarNotificacion(msg, tipo) {
 }
 
 function volverAClientes() {
+  // Preguntar si hay registros sin finalizar
   if (!inspeccionFinalizada && registros.length > 0) {
-    const confirmar = confirm("⚠️ Hay registros sin finalizar. ¿Deseas guardar la inspección antes de salir?");
+    const confirmar = confirm("⚠️ Hay " + registros.length + " registro(s) sin finalizar.\n\n¿Deseas guardar la inspección antes de volver?");
     if (confirmar) {
-      // Guardar y luego volver
       finalizarInspeccionConRetorno();
       return;
     }
   }
   
-  // Redirigir al sistema principal con un parámetro para mostrar clientes
+  // Limpiar datos de inspección actual
+  localStorage.removeItem('datosInspeccion');
+  
+  // Redirigir al login mostrando clientes
   window.location.href = "login_sistema_inspecciones.html?mostrar=clientes";
 }
 

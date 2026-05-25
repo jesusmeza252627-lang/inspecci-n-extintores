@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Módulo - Inspección de Extintores</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<div class="container">
+
+  <div class="header">
+    <h1>MÓDULO DE INSPECCIÓN DE EQUIPOS DE SEGURIDAD</h1>
+    <h2>Inspección de Equipos de Extintores Portátitles</h2>
+    <div id="syncStatus" class="sync-status">⬜ Sin cambios</div>
+  </div>
+    
+    <div class="toolbar">
+      <button class="tab-btn active" onclick="switchTab('inspeccion',this)">📋 Inspección</button>
+      <button class="tab-btn" onclick="switchTab('dashboard',this)">📊 Dashboard</button>
+      <button class="tab-btn" onclick="switchTab('informe',this)">📄 Informe</button>
+      <button class="tab-btn" onclick="switchTab('seguimiento',this)">📋 Seguimiento NC</button>
+    </div>
+
+
+  <!-- TAB INSPECCIÓN -->
+  <div id="tab-inspeccion" class="tab-content active">  
+
+    <div class="meta-grid">
+      <!-- Dentro del div class="meta-grid" -->
+      <div class="card field">
+        <label>Código - SHK</label>
+        <input id="codigoSHK" type="text" readonly>
+      </div>
+
+      <div class="card field">
+        <label>Cliente</label>
+        <input id="cliente" type="text" readonly>
+      </div>
+
+      <div class="card field">
+        <label>Sede / Proceso</label>
+        <input id="Sede" type="text" readonly>
+      </div>
+
+      <div class="card field">
+        <label>Fecha de inspección</label>
+        <input id="fechaInspeccion" type="date" readonly>
+      </div>
+
+      <div class="card field">
+        <label>Código de formato</label>
+        <input id="codigoFormato" type="text" readonly>
+      </div>
+
+    </div>
+    <div class="card" style="margin-bottom:16px;">
+
+      <div class="form-grid">
+
+        <div class="field">
+          <label>N° de EEP</label>
+          <input id="numeroExtintor" type="text">
+        </div>
+
+        <div class="field">
+          <label>Tipo de Agente</label>
+          <select id="tipoAgente" onchange="actualizarUnidadesCapacidad()">
+            <option value="">Seleccione</option>
+            <option>PQS</option>
+            <option>CO2</option>
+            <option>H2O-P</option>
+            <option>H2O-DI</option>
+            <option>ADP/PK</option>
+            <option>Otros</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>Capacidad</label>
+          <div style="display:flex; gap:8px;">
+            <input id="capacidad" type="number" min="0.1" step="0.01" placeholder="Cantidad" style="flex:1;">
+            <select id="unidadCapacidad" style="width:120px;">
+              <option value="" disabled selected>Unidad</option>
+              <option value="Kg.">Kg.</option>
+              <option value="L.">L.</option>
+              <option value="Lb.">Lb.</option>
+              <option value="Gal.">Gal.</option>
+              <option value="ml.">ml.</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Ubicación</label>
+          <input id="ubicacion" type="text">
+        </div>
+
+        <div class="field">
+          <label>Referencia</label>
+          <input id="referencia" type="text">
+        </div>
+
+        <div class="field">
+          <label>Zona de riesgo de incendio</label>
+          <select id="zonaRiesgo" onchange="cambiarColorRiesgo(this)">
+            <option value="">Seleccione</option>
+            <option value="Alta">Alta</option>
+            <option value="Media">Media</option>
+            <option value="Baja">Baja</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>Fecha de Carga</label>
+          <input id="fechaCarga" type="date">
+        </div>
+
+        <div class="field">
+          <label>Prueba Hidrostática</label>
+          <input id="pruebaHidrostatica" type="date">
+        </div>
+
+      </div>
+
+      <div class="field" style="margin-top:16px;">
+        <label>Procedimiento de inspección</label>
+        <div class="anomalias-grid" id="anomaliasGrid"></div>
+        <button type="button" class="action primary" onclick="agregarAnomalia()">➕ Agregar criterio</button>
+      </div>
+    
+      <div class="field" style="grid-column:span 2; margin-top: 24px;">
+        <label>Observaciones del Inspector</label>
+        <textarea
+          id="observaciones"
+          onfocus="iniciarNumeracion()"
+          onkeydown="numerarObservaciones(event)">
+        </textarea>
+        <input type="file" id="imagenObservacion" accept="image/*" multiple style="margin-top:8px;">
+        <button type="button" class="mini-btn danger" style="margin-top:8px;" onclick="eliminarImagenesActuales()">🗑️ Eliminar imágenes</button>
+      </div>
+
+    </div>
+
+    <div class="toolbar">
+      <button class="action success" onclick="nuevoRegistro()">➕ Agregar registro</button>
+      <button class="action primary" onclick="guardarRegistro()">💾 Guardar</button>
+      <button class="action secondary" onclick="limpiarFormulario()">🧹 Limpiar</button>
+      <button class="action warning" onclick="exportarExcel()">📥 Exportar a Excel</button>
+      <button class="action primary" onclick="sincronizarDesdeSheets()" title="Recargar datos desde Google Sheets">🔄 Recargar</button>
+      <!-- Dentro del toolbar, después del botón Recargar -->
+      <button class="action success" onclick="finalizarInspeccion()">✅ Finalizar Inspección</button>
+      <button class="action secondary" onclick="verInspeccionesHistoricas()">📜 Ver Inspecciones</button>
+    </div>
+
+    <h3 class="section-title">Inventario registrado</h3>
+
+    <div class="table-wrap">
+      <table id="tablaInspeccion">
+        <colgroup>
+          <col style="width:50px;">   <!-- N° -->
+          <col style="width:120px;">  <!-- Agente -->
+          <col style="width:120px;">  <!-- Tipo -->
+          <col style="width:90px;">   <!-- Capacidad -->
+          <col style="width:180px;">  <!-- Ubicación -->
+          <col style="width:180px;">  <!-- Referencia -->
+          <col style="width:120px;">  <!-- Zona Riesgo -->
+          <col style="width:100px;">  <!-- Fecha Carga -->
+          <col style="width:100px;">  <!-- PH -->
+
+          <!-- 20 anomalías -->
+          <col span="20" style="width:55px;">
+
+          <col style="width:250px;">  <!-- Detalles NC -->
+          <col style="width:180px;">  <!-- Prioridad -->
+          <col style="width:350px;">  <!-- Observaciones -->
+          <col style="width:100px;">  <!-- Acciones -->
+        </colgroup>
+        
+        
+        <thead>
+          <tr>
+            <th rowspan="2">N°</th>
+            <th colspan="2">Agente Extinguidor</th>
+            <th rowspan="2">Capacidad</th>
+            <th rowspan="2">Ubicación</th>
+            <th rowspan="2">Referencia</th>
+            <th rowspan="2">Zona Riesgo</th>
+            <th colspan="2">Mantenimiento</th>
+            <th colspan="20">Inspección de Anomalías</th>
+            <th rowspan="2">Detalles NC</th>
+            <th rowspan="2">Prioridad</th>
+            <th rowspan="2">Observaciones</th>
+            <th rowspan="2" style="background:#d97706; color:white;">📋 Seguimiento</th>
+            <th rowspan="2">Acciones</th>
+          </tr>
+          <tr>
+            <th class="sub">N° de EEP</th>
+            <th class="sub">Tipo de Agente</th>
+            <th class="sub">Fecha de Carga</th>
+            <th class="sub">Prueba Hidrostática</th>
+            <th class="sub">1</th><th class="sub">2</th><th class="sub">3</th><th class="sub">4</th>
+            <th class="sub">5</th><th class="sub">6</th><th class="sub">7</th><th class="sub">8</th>
+            <th class="sub">9</th><th class="sub">10</th><th class="sub">11</th><th class="sub">12</th>
+            <th class="sub">13</th><th class="sub">14</th><th class="sub">15</th><th class="sub">16</th>
+            <th class="sub">17</th><th class="sub">18</th><th class="sub">19</th><th class="sub">20</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <!-- TAB DASHBOARD -->
+  <!-- TAB DASHBOARD - Versión por Cliente -->
+  <div id="tab-dashboard" class="tab-content">
+    
+    <!-- Cabecera del dashboard -->
+    <div class="dashboard-cliente-header">
+      <div class="cliente-titulo">
+        <span class="cliente-icono">🏭</span>
+        <div>
+          <h2 id="dashboard-cliente-nombre">SDB - Soluciones Dinámicas B&R</h2>
+          <p id="dashboard-cliente-info">Código SHK: <span id="dashboard-codigo">105</span> · Última inspección: <span id="dashboard-ultima-fecha">25/05/2026</span></p>
+        </div>
+      </div>
+      <div class="cliente-fecha">
+        <span>📅</span>
+        <span id="dashboard-fecha-actual">Mayo 2026</span>
+      </div>
+    </div>
+
+    <!-- Fila 1: KPI Cards principales -->
+    <div class="kpi-dashboard-grid">
+      <div class="kpi-dashboard-card" style="background: linear-gradient(135deg, #1e3c72, #2a5298);">
+        <div class="kpi-icono">🧯</div>
+        <div class="kpi-dashboard-valor" id="kpi-total-extintores">0</div>
+        <div class="kpi-dashboard-label">Total Extintores</div>
+      </div>
+      <div class="kpi-dashboard-card" style="background: linear-gradient(135deg, #16a34a, #15803d);">
+        <div class="kpi-icono">✅</div>
+        <div class="kpi-dashboard-valor" id="kpi-conformes">0</div>
+        <div class="kpi-dashboard-label">Conformes</div>
+        <div class="kpi-sub" id="kpi-pct-conformes">0%</div>
+      </div>
+      <div class="kpi-dashboard-card" style="background: linear-gradient(135deg, #dc2626, #b91c1c);">
+        <div class="kpi-icono">⚠️</div>
+        <div class="kpi-dashboard-valor" id="kpi-anomalias">0</div>
+        <div class="kpi-dashboard-label">Con Anomalías</div>
+        <div class="kpi-sub" id="kpi-pct-anomalias">0%</div>
+      </div>
+      <div class="kpi-dashboard-card" style="background: linear-gradient(135deg, #d97706, #b45309);">
+        <div class="kpi-icono">🔴</div>
+        <div class="kpi-dashboard-valor" id="kpi-urgentes">0</div>
+        <div class="kpi-dashboard-label">Anomalías Urgentes</div>
+      </div>
+    </div>
+
+    <!-- Fila 2: Estado de extintores (tipo semáforo) -->
+    <div class="dashboard-fila">
+      <div class="dashboard-card">
+        <h3>📊 ESTADO DE EXTINTORES</h3>
+        <div class="estado-extintores-grid">
+          <div class="estado-item">
+            <div class="estado-color" style="background:#16a34a;"></div>
+            <div class="estado-info">
+              <span class="estado-numero" id="estado-conformes">0</span>
+              <span class="estado-label">Conformes</span>
+            </div>
+          </div>
+          <div class="estado-item">
+            <div class="estado-color" style="background:#f59e0b;"></div>
+            <div class="estado-info">
+              <span class="estado-numero" id="estado-observado">0</span>
+              <span class="estado-label">Observado</span>
+            </div>
+          </div>
+          <div class="estado-item">
+            <div class="estado-color" style="background:#dc2626;"></div>
+            <div class="estado-info">
+              <span class="estado-numero" id="estado-critico">0</span>
+              <span class="estado-label">Crítico</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="dashboard-card">
+        <h3>⚠️ PRIORIDAD DE ANOMALÍAS</h3>
+        <div class="prioridad-grid">
+          <div class="prioridad-item urgente">
+            <span class="prioridad-numero" id="prioridad-urgente">0</span>
+            <span class="prioridad-label">URGENTE</span>
+          </div>
+          <div class="prioridad-item importante">
+            <span class="prioridad-numero" id="prioridad-importante">0</span>
+            <span class="prioridad-label">IMPORTANTE</span>
+          </div>
+          <div class="prioridad-item pendiente">
+            <span class="prioridad-numero" id="prioridad-pendiente">0</span>
+            <span class="prioridad-label">PENDIENTE</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Fila 3: Gráficos principales -->
+    <div class="dashboard-fila">
+      <div class="dashboard-card">
+        <h3>🔥 POR ZONA DE RIESGO</h3>
+        <canvas id="chartZonaCliente" height="180"></canvas>
+      </div>
+      <div class="dashboard-card">
+        <h3>🧯 POR TIPO DE AGENTE</h3>
+        <canvas id="chartAgenteCliente" height="180"></canvas>
+      </div>
+    </div>
+
+    <!-- Fila 4: Top anomalías y actividades por mes -->
+    <div class="dashboard-fila">
+      <div class="dashboard-card">
+        <h3>🏆 TOP 5 ANOMALÍAS</h3>
+        <div id="top-anomalias-lista" class="top-anomalias-lista"></div>
+      </div>
+      <div class="dashboard-card">
+        <h3>📅 EXTINTORES POR MES</h3>
+        <canvas id="chartActividadesMes" height="180"></canvas>
+      </div>
+    </div>
+
+    <!-- Fila 5: Resumen por ubicación/sede -->
+    <div class="dashboard-card-full">
+      <h3>📍 DISTRIBUCIÓN POR UBICACIÓN</h3>
+      <div id="resumen-ubicaciones" class="ubicaciones-grid"></div>
+    </div>
+
+    <!-- Fila 6: Alertas de mantenimiento -->
+    <div class="dashboard-card-full" style="background: linear-gradient(135deg, #fef3c7, #fffbeb);">
+      <h3>⏰ ALERTAS DE MANTENIMIENTO</h3>
+      <div id="alertas-mantenimiento" class="alertas-lista"></div>
+    </div>
+  </div>
+
+
+  <!-- TAB INFORME -->
+  <div id="tab-informe" class="tab-content">
+
+    <!-- TAB SEGUIMIENTO DE NO CONFORMIDADES -->
+  <div id="tab-seguimiento" class="tab-content">
+    
+    <!-- Resumen de seguimiento -->
+    <div class="seguimiento-resumen">
+      <div class="seguimiento-kpi-card">
+        <div class="seguimiento-kpi-num" id="seguimiento-total-nc">0</div>
+        <div class="seguimiento-kpi-label">Total NC</div>
+      </div>
+      <div class="seguimiento-kpi-card" style="background:#fef3c7;">
+        <div class="seguimiento-kpi-num" id="seguimiento-pendientes">0</div>
+        <div class="seguimiento-kpi-label">Pendientes</div>
+      </div>
+      <div class="seguimiento-kpi-card" style="background:#dbeafe;">
+        <div class="seguimiento-kpi-num" id="seguimiento-proceso">0</div>
+        <div class="seguimiento-kpi-label">En proceso</div>
+      </div>
+      <div class="seguimiento-kpi-card" style="background:#d1fae5;">
+        <div class="seguimiento-kpi-num" id="seguimiento-corregidas">0</div>
+        <div class="seguimiento-kpi-label">Corregidas</div>
+      </div>
+      <div class="seguimiento-kpi-card" style="background:#e0e7ff;">
+        <div class="seguimiento-kpi-num" id="seguimiento-verificadas">0</div>
+        <div class="seguimiento-kpi-label">Verificadas</div>
+      </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="seguimiento-filtros">
+      <select id="filtro-estado-nc" onchange="filtrarSeguimiento()">
+        <option value="todos">📋 Todos los estados</option>
+        <option value="pendiente">⏳ Pendiente</option>
+        <option value="proceso">🔄 En proceso</option>
+        <option value="corregida">✅ Corregida</option>
+        <option value="verificada">🔍 Verificada</option>
+      </select>
+      <input type="text" id="filtro-extintor-nc" placeholder="🔍 Buscar por N° EEP..." onkeyup="filtrarSeguimiento()">
+      <button class="action primary" onclick="exportarSeguimientoExcel()">📥 Exportar seguimiento</button>
+    </div>
+
+    <!-- Tabla de seguimiento -->
+    <div class="table-wrap">
+      <table class="tabla-seguimiento" id="tablaSeguimiento">
+        <thead>
+          <tr>
+            <th>EEP</th>
+            <th>Código</th>
+            <th>Anomalía / NC</th>
+            <th>Prioridad</th>
+            <th>Ubicación</th>
+            <th>Fecha Inspección</th>
+            <th>Estado</th>
+            <th>Fecha Levantamiento</th>
+            <th>Responsable</th>
+            <th>Observaciones</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="tbody-seguimiento"></tbody>
+      </table>
+    </div>
+
+    <!-- Modal para levantar NC -->
+    <div id="modal-levantar-nc" class="modal" style="display:none;">
+      <div class="modal-contenido">
+        <div class="modal-header">
+          <h3>📋 Levantamiento de No Conformidad</h3>
+          <button class="modal-cerrar" onclick="cerrarModalLevantar()">&times;</button>
+        </div>
+        <div class="modal-cuerpo">
+          <div class="info-nc" id="modal-info-nc"></div>
+          
+          <div class="campo-form">
+            <label>Estado de la NC:</label>
+            <select id="modal-estado-nc">
+              <option value="pendiente">⏳ Pendiente - No se ha iniciado</option>
+              <option value="proceso">🔄 En proceso - Se está trabajando</option>
+              <option value="corregida">✅ Corregida - Acción correctiva aplicada</option>
+              <option value="verificada">🔍 Verificada - Validada por supervisor</option>
+            </select>
+          </div>
+          
+          <div class="campo-form">
+            <label>Fecha de levantamiento:</label>
+            <input type="date" id="modal-fecha-levantamiento">
+          </div>
+          
+          <div class="campo-form">
+            <label>Responsable del levantamiento:</label>
+            <input type="text" id="modal-responsable" placeholder="Nombre del responsable">
+          </div>
+          
+          <div class="campo-form">
+            <label>Acción correctiva realizada:</label>
+            <textarea id="modal-accion-realizada" rows="3" placeholder="Describa la acción tomada para corregir esta no conformidad..."></textarea>
+          </div>
+          
+          <div class="campo-form">
+            <label>Evidencia (opcional):</label>
+            <input type="file" id="modal-evidencia" accept="image/*">
+            <small>Adjuntar foto de la corrección</small>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="action secondary" onclick="cerrarModalLevantar()">Cancelar</button>
+          <button class="action success" onclick="guardarLevantamientoNC()">💾 Guardar levantamiento</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toolbar">
+    <button class="action danger" onclick="descargarPDF()">
+      📄 Descargar PDF
+    </button>
+  </div>
+
+  <div class="report-section" id="contenidoInforme"></div>
+
+</div>
+
+</div>
+
+<!-- Modal de inspecciones históricas -->
+<div id="modal-historial" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; justify-content:center; align-items:center;">
+  <div style="background:white; border-radius:16px; width:90%; max-width:1000px; max-height:80vh; overflow:auto; padding:20px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+      <h2>📋 Inspecciones Guardadas</h2>
+      <button onclick="cerrarModalHistorial()" style="background:#dc2626; color:white; border:none; border-radius:8px; padding:8px 16px; cursor:pointer;">✖ Cerrar</button>
+    </div>
+    <div id="lista-inspecciones"></div>
+  </div>
+</div>
+
+<button class="action secondary" onclick="volverAClientes()" style="margin-right: auto;">← Volver a Clientes</button>
+
+<script src="js/config.js"></script>
+<script src="js/sheets.js"></script>
+<script src="js/app.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+</body>
+</html>
