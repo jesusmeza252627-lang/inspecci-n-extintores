@@ -201,6 +201,91 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:var(--gris-fondo);min-he
   animation:slideIn .3s ease;
 }
 @keyframes slideIn{from{transform:translateX(120%);}to{transform:translateX(0);}}
+
+/* ========== RESPONSIVE SOLO PARA LOGIN EN MÓVIL ========== */
+
+/* Tablets y celulares grandes */
+@media (max-width: 768px) {
+  .login-card {
+    width: 90vw;
+    max-width: 400px;
+    padding: 32px 24px;
+    margin: 16px;
+  }
+  
+  .login-logo h1 {
+    font-size: 1.1rem;
+  }
+  
+  .login-escudo {
+    width: 55px;
+    height: 55px;
+    font-size: 24px;
+  }
+  
+  .login-field input,
+  .login-field select {
+    padding: 10px 14px;
+    font-size: 16px; /* Evita que el zoom automático en iOS */
+  }
+  
+  .btn-login {
+    padding: 12px;
+    font-size: 0.95rem;
+  }
+  
+  .login-field label {
+    font-size: 0.85rem;
+  }
+}
+
+/* Celulares pequeños (menos de 480px) */
+@media (max-width: 480px) {
+  .login-card {
+    padding: 24px 20px;
+    width: 92vw;
+  }
+  
+  .login-logo h1 {
+    font-size: 0.95rem;
+  }
+  
+  .login-logo p {
+    font-size: 0.75rem;
+  }
+  
+  .login-escudo {
+    width: 45px;
+    height: 45px;
+    font-size: 20px;
+  }
+  
+  .login-field {
+    margin-bottom: 16px;
+  }
+  
+  .login-field input,
+  .login-field select {
+    padding: 10px 12px;
+  }
+  
+  .btn-login {
+    padding: 10px;
+    font-size: 0.9rem;
+  }
+  
+  .error-msg {
+    font-size: 0.75rem;
+    padding: 8px 12px;
+  }
+  
+  /* El bloque de cuentas demo */
+  .login-card > div:last-child {
+    padding: 10px 12px !important;
+    font-size: 0.7rem !important;
+  }
+}
+
 </style>
 
 <div class="notif" id="notif"></div>
