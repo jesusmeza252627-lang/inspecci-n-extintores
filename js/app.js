@@ -241,6 +241,31 @@ function cambiarColorRiesgo(select){
   }
 }
 
+function cambiarColorZona() {
+  const select = document.getElementById("zonaRiesgo");
+
+  switch (select.value) {
+    case "Alta":
+      select.style.backgroundColor = "#dc2626";
+      select.style.color = "white";
+      break;
+
+    case "Media":
+      select.style.backgroundColor = "#f59e0b";
+      select.style.color = "black";
+      break;
+
+    case "Baja":
+      select.style.backgroundColor = "#16a34a";
+      select.style.color = "white";
+      break;
+
+    default:
+      select.style.backgroundColor = "";
+      select.style.color = "";
+  }
+}
+
 // ── GUARDAR ──
 async function guardarRegistro() {
 
