@@ -116,12 +116,12 @@
 
         <div class="field">
           <label>Zona de riesgo de incendio</label>
-            <select id="zonaRiesgo">
-              <option value="">Seleccione</option>
-              <option style="background:red;color:white;">Alta</option>
-              <option style="background:yellow;">Media</option>
-              <option style="background:green;color:white;">Baja</option>
-            </select>
+          <select id="zonaRiesgo" onchange="cambiarColorRiesgo(this)">
+            <option value="">Seleccione</option>
+            <option style="background:red;color:white;">Alta</option>
+            <option style="background:yellow;">Media</option>
+            <option style="background:green;color:white;">Baja</option>
+          </select>
         </div>
 
         <div class="field">
