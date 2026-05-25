@@ -347,8 +347,15 @@
 
   <!-- TAB INFORME -->
   <div id="tab-informe" class="tab-content">
+    <div class="toolbar">
+      <button class="action danger" onclick="descargarPDF()">
+        📄 Descargar PDF
+      </button>
+    </div>
+    <div class="report-section" id="contenidoInforme"></div>
+  </div>
 
-    <!-- TAB SEGUIMIENTO DE NO CONFORMIDADES -->
+  <!-- TAB SEGUIMIENTO DE NO CONFORMIDADES -->
   <div id="tab-seguimiento" class="tab-content">
     
     <!-- Resumen de seguimiento -->
@@ -394,7 +401,7 @@
         <thead>
           <tr>
             <th>EEP</th>
-            <th>Código</th>
+            <th>Código NC</th>
             <th>Anomalía / NC</th>
             <th>Prioridad</th>
             <th>Ubicación</th>
@@ -409,65 +416,7 @@
         <tbody id="tbody-seguimiento"></tbody>
       </table>
     </div>
-
-    <!-- Modal para levantar NC -->
-    <div id="modal-levantar-nc" class="modal" style="display:none;">
-      <div class="modal-contenido">
-        <div class="modal-header">
-          <h3>📋 Levantamiento de No Conformidad</h3>
-          <button class="modal-cerrar" onclick="cerrarModalLevantar()">&times;</button>
-        </div>
-        <div class="modal-cuerpo">
-          <div class="info-nc" id="modal-info-nc"></div>
-          
-          <div class="campo-form">
-            <label>Estado de la NC:</label>
-            <select id="modal-estado-nc">
-              <option value="pendiente">⏳ Pendiente - No se ha iniciado</option>
-              <option value="proceso">🔄 En proceso - Se está trabajando</option>
-              <option value="corregida">✅ Corregida - Acción correctiva aplicada</option>
-              <option value="verificada">🔍 Verificada - Validada por supervisor</option>
-            </select>
-          </div>
-          
-          <div class="campo-form">
-            <label>Fecha de levantamiento:</label>
-            <input type="date" id="modal-fecha-levantamiento">
-          </div>
-          
-          <div class="campo-form">
-            <label>Responsable del levantamiento:</label>
-            <input type="text" id="modal-responsable" placeholder="Nombre del responsable">
-          </div>
-          
-          <div class="campo-form">
-            <label>Acción correctiva realizada:</label>
-            <textarea id="modal-accion-realizada" rows="3" placeholder="Describa la acción tomada para corregir esta no conformidad..."></textarea>
-          </div>
-          
-          <div class="campo-form">
-            <label>Evidencia (opcional):</label>
-            <input type="file" id="modal-evidencia" accept="image/*">
-            <small>Adjuntar foto de la corrección</small>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button class="action secondary" onclick="cerrarModalLevantar()">Cancelar</button>
-          <button class="action success" onclick="guardarLevantamientoNC()">💾 Guardar levantamiento</button>
-        </div>
-      </div>
-    </div>
   </div>
-
-  <div class="toolbar">
-    <button class="action danger" onclick="descargarPDF()">
-      📄 Descargar PDF
-    </button>
-  </div>
-
-  <div class="report-section" id="contenidoInforme"></div>
-
-</div>
 
 </div>
 
@@ -479,6 +428,53 @@
       <button onclick="cerrarModalHistorial()" style="background:#dc2626; color:white; border:none; border-radius:8px; padding:8px 16px; cursor:pointer;">✖ Cerrar</button>
     </div>
     <div id="lista-inspecciones"></div>
+  </div>
+</div>
+
+<!-- Modal para levantar NC -->
+<div id="modal-levantar-nc" class="modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; justify-content:center; align-items:center;">
+  <div class="modal-contenido" style="background:white; border-radius:16px; width:90%; max-width:560px; max-height:85vh; overflow:auto; box-shadow:0 20px 60px rgba(0,0,0,.3);">
+    <div class="modal-header" style="background:#1e3c72; color:white; padding:18px 22px; border-radius:16px 16px 0 0; display:flex; justify-content:space-between; align-items:center;">
+      <h3 style="margin:0; font-size:1rem;">🔧 Levantamiento de No Conformidad</h3>
+      <button onclick="cerrarModalLevantar()" style="background:rgba(255,255,255,0.2); border:none; border-radius:8px; color:white; width:32px; height:32px; cursor:pointer; font-size:1.1rem;">&times;</button>
+    </div>
+    <div class="modal-cuerpo" style="padding:20px;">
+      <div class="info-nc" id="modal-info-nc" style="background:#f0f9ff; border-radius:10px; padding:14px; margin-bottom:16px; border-left:4px solid #3b82f6; font-size:0.9rem; line-height:1.6;"></div>
+      
+      <div class="campo-form" style="margin-bottom:14px;">
+        <label style="display:block; font-weight:600; font-size:0.85rem; margin-bottom:6px;">Estado de la NC:</label>
+        <select id="modal-estado-nc" style="width:100%; padding:10px; border:1.5px solid #d1d5db; border-radius:8px;">
+          <option value="pendiente">⏳ Pendiente — No se ha iniciado</option>
+          <option value="proceso">🔄 En proceso — Se está trabajando</option>
+          <option value="corregida">✅ Corregida — Acción correctiva aplicada</option>
+          <option value="verificada">🔍 Verificada — Validada por supervisor</option>
+        </select>
+      </div>
+      
+      <div class="campo-form" style="margin-bottom:14px;">
+        <label style="display:block; font-weight:600; font-size:0.85rem; margin-bottom:6px;">Fecha de levantamiento:</label>
+        <input type="date" id="modal-fecha-levantamiento" style="width:100%; padding:10px; border:1.5px solid #d1d5db; border-radius:8px;">
+      </div>
+      
+      <div class="campo-form" style="margin-bottom:14px;">
+        <label style="display:block; font-weight:600; font-size:0.85rem; margin-bottom:6px;">Responsable del levantamiento:</label>
+        <input type="text" id="modal-responsable" placeholder="Nombre del responsable" style="width:100%; padding:10px; border:1.5px solid #d1d5db; border-radius:8px;">
+      </div>
+      
+      <div class="campo-form" style="margin-bottom:14px;">
+        <label style="display:block; font-weight:600; font-size:0.85rem; margin-bottom:6px;">Acción correctiva realizada:</label>
+        <textarea id="modal-accion-realizada" rows="3" placeholder="Describa la acción tomada..." style="width:100%; padding:10px; border:1.5px solid #d1d5db; border-radius:8px; resize:vertical;"></textarea>
+      </div>
+      
+      <div class="campo-form" style="margin-bottom:6px;">
+        <label style="display:block; font-weight:600; font-size:0.85rem; margin-bottom:6px;">Evidencia fotográfica <small style="color:#9ca3af;">(opcional)</small>:</label>
+        <input type="file" id="modal-evidencia" accept="image/*" style="width:100%;">
+      </div>
+    </div>
+    <div class="modal-footer" style="padding:16px 20px; border-top:1px solid #e5e7eb; display:flex; gap:10px; justify-content:flex-end;">
+      <button onclick="cerrarModalLevantar()" style="background:#f1f5f9; border:none; border-radius:8px; padding:10px 20px; cursor:pointer; font-weight:600;">Cancelar</button>
+      <button onclick="guardarLevantamientoNC()" style="background:linear-gradient(135deg,#16a34a,#15803d); color:white; border:none; border-radius:8px; padding:10px 24px; font-weight:700; cursor:pointer;">💾 Guardar levantamiento</button>
+    </div>
   </div>
 </div>
 

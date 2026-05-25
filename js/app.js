@@ -51,6 +51,9 @@ async function switchTab(tab, btn) {
   btn.classList.add("active");
   if (tab === "dashboard") actualizarDashboard();
   if (tab === "informe") await actualizarInforme();
+  if (tab === "seguimiento") {
+    cargarSeguimiento();
+  }
 }
 
 // ── Autocompletar cliente ──

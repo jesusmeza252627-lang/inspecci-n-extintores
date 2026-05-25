@@ -1,4 +1,10 @@
-<style>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Login - Sistema de Inspección SST</title>
+    <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 :root{
   --azul-oscuro:#0c1e3f;
@@ -21,7 +27,6 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:var(--gris-fondo);min-he
 
 #pantalla-login{align-items:center;justify-content:center;background:linear-gradient(135deg,#1e3c72 0%,#2a5298 60%,#3b82f6 100%);}
 
-/* TARJETA DE LOGIN - MÁS GRANDE EN CELULAR */
 .login-card{
   background:white;
   border-radius:20px;
@@ -31,7 +36,6 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:var(--gris-fondo);min-he
   box-shadow:0 20px 60px rgba(0,0,0,.25);
 }
 
-/* RESPONSIVE - FUERZA TAMAÑO GRANDE EN CELULAR */
 @media only screen and (max-width: 600px) {
   .login-card {
     width: 95% !important;
@@ -76,7 +80,6 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:var(--gris-fondo);min-he
 .btn-login:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(30,60,114,.4);}
 .error-msg{background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:10px 14px;color:#dc2626;font-size:.88rem;margin-top:12px;display:none;}
 
-/* ── RESTO DE ESTILOS (HEADER, CLIENTES, MODULOS, ADMIN, ETC) ── */
 .app-header{background:linear-gradient(135deg,var(--azul-oscuro),var(--azul-medio));color:white;padding:14px 28px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 2px 12px rgba(0,0,0,.2);}
 .app-header-izq{display:flex;align-items:center;gap:14px;}
 .app-header h1{font-size:1.05rem;font-weight:700;}
@@ -164,7 +167,216 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:var(--gris-fondo);min-he
 .kpi-label{font-size:.83rem;color:var(--gris-texto);margin-top:4px;}
 .notif{position:fixed;top:20px;right:20px;background:var(--verde);color:white;border-radius:10px;padding:13px 20px;font-weight:600;font-size:.9rem;box-shadow:0 6px 20px rgba(0,0,0,.2);z-index:999;display:none;animation:slideIn .3s ease;}
 @keyframes slideIn{from{transform:translateX(120%);}to{transform:translateX(0);}}
-</style>
+    </style>
+</head>
+<body>
+
+<div class="notif" id="notif"></div>
+
+<!-- ═══ LOGIN ═══ -->
+<div class="pantalla activa" id="pantalla-login" style="flex-direction:column;">
+  <div class="login-card" style="margin:auto;">
+    <div class="login-logo">
+      <div class="login-escudo">🛡️</div>
+      <h1>Sistema de Inspección de<br>Equipos de Seguridad</h1>
+      <p>SVG · Seguridad, Salud y Gestión</p>
+    </div>
+    <div class="login-field">
+      <label>Usuario</label>
+      <input type="text" id="inp-usuario" placeholder="Ingresa tu usuario" autocomplete="off">
+    </div>
+    <div class="login-field">
+      <label>Contraseña</label>
+      <input type="password" id="inp-password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <button class="btn-login" onclick="doLogin()">Iniciar Sesión</button>
+    <div class="error-msg" id="error-login">Usuario o contraseña incorrectos.</div>
+    <div style="margin-top:20px;background:#f0f9ff;border-radius:10px;padding:14px 16px;font-size:.82rem;color:#0369a1;line-height:1.6;">
+      <strong>Cuentas de demo:</strong><br>
+      admin / admin123 → Administrador<br>
+      supervisor1 / sup123 → Supervisor<br>
+      tecnico1 / tec123 → Técnico
+    </div>
+  </div>
+</div>
+
+<!-- ═══ SELECCIÓN DE CLIENTE ═══ -->
+<div class="pantalla" id="pantalla-cliente" style="flex-direction:column;">
+  <div class="app-header">
+    <div class="app-header-izq">
+      <div>
+        <div style="font-size:1.05rem;font-weight:700;">Sistema de Inspección SST</div>
+        <div style="font-size:.8rem;opacity:.8;">Seleccione el cliente a inspeccionar</div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <span class="badge-rol" id="badge-rol-cli"></span>
+      <span style="font-size:.88rem;opacity:.85;" id="nombre-usuario-cli"></span>
+      <button class="btn-salir" onclick="cerrarSesion()">Salir</button>
+    </div>
+  </div>
+  <div class="cliente-cuerpo">
+    <h2>Selecciona el Cliente</h2>
+    <p>Haz clic en un cliente para configurar la inspección</p>
+    <div class="clientes-grid" id="clientes-grid"></div>
+
+    <div class="meta-box" id="meta-box" style="display:none;">
+      <h3>📋 Datos de la Inspección — <span id="meta-cliente-nombre"></span></h3>
+      <div class="meta-grid-2">
+        <div class="meta-field">
+          <label>Código SHK</label>
+          <input type="text" id="meta-codigo" readonly>
+        </div>
+        <div class="meta-field">
+          <label>Cliente</label>
+          <input type="text" id="meta-cliente" readonly>
+        </div>
+        <div class="meta-field">
+          <label>Sede / Proceso</label>
+          <input type="text" id="meta-sede" placeholder="Ej: Planta Principal, Almacén 1...">
+        </div>
+        <div class="meta-field">
+          <label>Fecha de Inspección</label>
+          <input type="date" id="meta-fecha">
+        </div>
+        <div class="meta-field" style="grid-column:span 2;">
+          <label>Código de Formato</label>
+          <input type="text" id="meta-codigo-formato" readonly>
+          <div class="info-codigo">ℹ️ Se genera automáticamente — número único correlativo por inspección</div>
+        </div>
+      </div>
+      <button class="btn-continuar" id="btn-continuar" onclick="irAModulos()" disabled>Continuar a Módulos →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MÓDULOS ═══ -->
+<div class="pantalla" id="pantalla-modulos" style="flex-direction:column;">
+  <div class="app-header">
+    <div class="app-header-izq">
+      <button class="btn-volver" onclick="irAClientes()">← Volver</button>
+      <div>
+        <div style="font-size:1.05rem;font-weight:700;">Módulos de Inspección</div>
+        <div style="font-size:.8rem;opacity:.8;" id="header-cliente-modulos"></div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <span class="badge-rol" id="badge-rol-mod"></span>
+      <span style="font-size:.88rem;opacity:.85;" id="nombre-usuario-mod"></span>
+      <button class="btn-salir" onclick="cerrarSesion()">Salir</button>
+    </div>
+  </div>
+  <div class="modulos-cuerpo">
+    <div class="cliente-banner">
+      <div class="cliente-banner-info">
+        <h3 id="banner-cliente-nombre"></h3>
+        <p id="banner-sede"></p>
+      </div>
+      <div class="cliente-banner-meta">
+        <div class="meta-chip"><span>Código SHK</span><strong id="banner-codigo"></strong></div>
+        <div class="meta-chip"><span>Fecha</span><strong id="banner-fecha"></strong></div>
+        <div class="meta-chip"><span>Formato</span><strong id="banner-formato"></strong></div>
+        <div class="meta-chip"><span>Inspector</span><strong id="banner-inspector"></strong></div>
+      </div>
+    </div>
+    <h2 style="color:var(--azul-oscuro);margin-bottom:6px;font-size:1.15rem;">Selecciona el Módulo de Inspección</h2>
+    <p style="color:var(--gris-texto);font-size:.9rem;margin-bottom:22px;">Todos los módulos comparten el cliente y datos de esta sesión</p>
+    <div class="modulos-grid">
+      <div class="modulo-card activo" onclick="abrirModuloExtintores()">
+        <div class="modulo-badge activo">Activo</div>
+        <div class="modulo-icono">🧯</div>
+        <div class="modulo-nombre">Extintores Portátiles</div>
+        <div class="modulo-desc">Inspección de EEP, anomalías, manómetros, fechas de carga y PH</div>
+      </div>
+      <div class="modulo-card" onclick="notif('Módulo en desarrollo próximamente','warn')">
+        <div class="modulo-badge nuevo" style="background:#fef3c7;color:#92400e;">Próximo</div>
+        <div class="modulo-icono">🚒</div>
+        <div class="modulo-nombre">Equipos Contra Incendio</div>
+        <div class="modulo-desc">Gabinetes, mangueras, rociadores y detectores de humo</div>
+      </div>
+      <div class="modulo-card" onclick="notif('Módulo en desarrollo próximamente','warn')">
+        <div class="modulo-badge nuevo" style="background:#fef3c7;color:#92400e;">Próximo</div>
+        <div class="modulo-icono">🦺</div>
+        <div class="modulo-nombre">EPP Personal</div>
+        <div class="modulo-desc">Cascos, arneses, lentes, guantes y equipos de protección individual</div>
+      </div>
+      <div class="modulo-card" onclick="notif('Módulo en desarrollo próximamente','warn')">
+        <div class="modulo-badge nuevo" style="background:#fef3c7;color:#92400e;">Próximo</div>
+        <div class="modulo-icono">⚡</div>
+        <div class="modulo-nombre">Instalaciones Eléctricas</div>
+        <div class="modulo-desc">Tableros, pozos a tierra, interruptores y puntos de fuerza</div>
+      </div>
+      <div class="modulo-card" onclick="notif('Módulo en desarrollo próximamente','warn')">
+        <div class="modulo-badge nuevo" style="background:#fef3c7;color:#92400e;">Próximo</div>
+        <div class="modulo-icono">🚪</div>
+        <div class="modulo-nombre">Señalización y Evacu.</div>
+        <div class="modulo-desc">Señales de seguridad, rutas de evacuación y puntos de reunión</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ ADMIN ═══ -->
+<div class="pantalla" id="pantalla-admin" style="flex-direction:column;">
+  <div class="app-header">
+    <div class="app-header-izq">
+      <div>
+        <div style="font-size:1.05rem;font-weight:700;">Panel de Administración</div>
+        <div style="font-size:.8rem;opacity:.8;">Gestión de usuarios, accesos y trazabilidad</div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <span class="badge-rol badge-admin">Administrador</span>
+      <span style="font-size:.88rem;opacity:.85;" id="nombre-usuario-admin"></span>
+      <button class="btn-salir" onclick="cerrarSesion()">Salir</button>
+    </div>
+  </div>
+  <div class="admin-cuerpo">
+    <div class="kpi-grid">
+      <div class="kpi-card"><div class="kpi-num" id="kpi-total-usuarios">0</div><div class="kpi-label">Usuarios totales</div></div>
+      <div class="kpi-card"><div class="kpi-num" id="kpi-supervisores">0</div><div class="kpi-label">Supervisores</div></div>
+      <div class="kpi-card"><div class="kpi-num" id="kpi-tecnicos">0</div><div class="kpi-label">Técnicos</div></div>
+      <div class="kpi-card"><div class="kpi-num" id="kpi-inspecciones">0</div><div class="kpi-label">Inspecciones registradas</div></div>
+    </div>
+
+    <div class="admin-tabs">
+      <button class="admin-tab activo" onclick="switchAdminTab('usuarios',this)">👥 Usuarios</button>
+      <button class="admin-tab" onclick="switchAdminTab('trazabilidad',this)">📋 Trazabilidad</button>
+      <button class="admin-tab" onclick="switchAdminTab('nuevo',this)">➕ Crear Usuario</button>
+    </div>
+
+    <div class="admin-panel activo" id="admin-usuarios">
+      <table class="tabla-usuarios" id="tabla-usuarios">
+        <thead><tr><th>Usuario</th><th>Nombre</th><th>Rol</th><th>Último acceso</th><th>Acciones</th></tr></thead>
+        <tbody id="tbody-usuarios"></tbody>
+      </table>
+    </div>
+
+    <div class="admin-panel" id="admin-trazabilidad">
+      <div class="trazabilidad-lista" id="lista-trazabilidad"></div>
+    </div>
+
+    <div class="admin-panel" id="admin-nuevo">
+      <div class="form-nuevo-usuario">
+        <h3>Crear nuevo usuario</h3>
+        <div class="fu-grid">
+          <div class="fu-field"><label>Usuario (login)</label><input type="text" id="nu-usuario" placeholder="ej: tecnico2"></div>
+          <div class="fu-field"><label>Contraseña</label><input type="password" id="nu-password" placeholder="mínimo 6 chars"></div>
+          <div class="fu-field"><label>Nombre completo</label><input type="text" id="nu-nombre" placeholder="Juan Pérez"></div>
+          <div class="fu-field"><label>Rol</label>
+            <select id="nu-rol">
+              <option value="supervisor">Supervisor</option>
+              <option value="tecnico">Técnico</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn-crear-usuario" onclick="crearUsuario()">Crear Usuario</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
 // ========== USUARIOS Y DATOS ==========
 const USUARIOS = [
   {id:1,usuario:"admin",password:"admin123",nombre:"Administrador SVG",rol:"admin",ultimoAcceso:"2025-05-24 09:12"},
@@ -206,12 +418,9 @@ function guardarSesionEnStorage(user) {
 function recuperarSesionStorage() {
   const guardada = localStorage.getItem('sesion_activa');
   if (!guardada) return null;
-  
   const sesionData = JSON.parse(guardada);
   const usuarioCompleto = USUARIOS.find(u => u.usuario === sesionData.usuario);
-  if (usuarioCompleto) {
-    return usuarioCompleto;
-  }
+  if (usuarioCompleto) return usuarioCompleto;
   return null;
 }
 
@@ -234,10 +443,7 @@ function doLogin(){
   if(!user){ err.style.display='block'; return; }
   err.style.display='none';
   sesion = user;
-  
-  // Guardar en localStorage
   guardarSesionEnStorage(user);
-  
   registrarTrazabilidad(user.usuario, user.rol, 'Inicio de sesión exitoso');
   if(user.rol==='admin'){ irAAdmin(); }
   else { irAClientes(); }
@@ -252,9 +458,7 @@ function irAAdmin(){
 }
 
 function irAClientes(){
-  // Limpiar parámetros de URL
   window.history.replaceState({}, document.title, window.location.pathname);
-  
   document.getElementById('badge-rol-cli').textContent = rolTexto(sesion.rol);
   document.getElementById('badge-rol-cli').className = 'badge-rol badge-'+sesion.rol;
   document.getElementById('nombre-usuario-cli').textContent = sesion.nombre;
@@ -267,9 +471,7 @@ function irAModulos(){
   if(!sede){ notif('Ingresa la sede / proceso','warn'); return; }
   const fecha = document.getElementById('meta-fecha').value;
   if(!fecha){ notif('Selecciona la fecha de inspección','warn'); return; }
-
-  document.getElementById('header-cliente-modulos').textContent =
-    CLIENTES[clienteSeleccionado]+' ('+clienteSeleccionado+') · '+sede;
+  document.getElementById('header-cliente-modulos').textContent = CLIENTES[clienteSeleccionado]+' ('+clienteSeleccionado+') · '+sede;
   document.getElementById('badge-rol-mod').textContent = rolTexto(sesion.rol);
   document.getElementById('badge-rol-mod').className = 'badge-rol badge-'+sesion.rol;
   document.getElementById('nombre-usuario-mod').textContent = sesion.nombre;
@@ -279,10 +481,7 @@ function irAModulos(){
   document.getElementById('banner-fecha').textContent = fecha;
   document.getElementById('banner-formato').textContent = document.getElementById('meta-codigo-formato').value;
   document.getElementById('banner-inspector').textContent = sesion.nombre;
-
-  registrarTrazabilidad(sesion.usuario, sesion.rol,
-    'Inicio de inspección — Cliente: '+CLIENTES[clienteSeleccionado]+' ('+clienteSeleccionado+') — Sede: '+sede);
-
+  registrarTrazabilidad(sesion.usuario, sesion.rol, 'Inicio de inspección — Cliente: '+CLIENTES[clienteSeleccionado]+' ('+clienteSeleccionado+') — Sede: '+sede);
   pantalla('modulos');
 }
 
@@ -306,30 +505,43 @@ function seleccionarCliente(cod,nom,event){
   });
   event.currentTarget.style.borderColor='var(--azul-claro)';
   event.currentTarget.style.boxShadow='var(--sombra)';
-
   contadorInspecciones++;
   const numFormato = String(contadorInspecciones).padStart(4,'0');
   const hoy = new Date().toISOString().split('T')[0];
-
   document.getElementById('meta-codigo').value = cod;
   document.getElementById('meta-cliente').value = nom;
   document.getElementById('meta-fecha').value = hoy;
   document.getElementById('meta-codigo-formato').value = `FO-UIG-DIN-GO-OS-${numFormato}`;
   document.getElementById('meta-cliente-nombre').textContent = nom;
   document.getElementById('meta-sede').value = '';
-
   const box = document.getElementById('meta-box');
   box.style.display='block';
-
   const btn = document.getElementById('btn-continuar');
   btn.disabled = false;
-
   document.getElementById('meta-sede').oninput = ()=>{
     btn.disabled = !document.getElementById('meta-sede').value.trim();
   };
   btn.disabled = true;
-
   box.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+function guardarUsuariosStorage(){
+  localStorage.setItem('svg_usuarios', JSON.stringify(USUARIOS));
+}
+
+function cargarUsuariosStorage(){
+  const guardados = localStorage.getItem('svg_usuarios');
+  if(guardados){
+    try{
+      const u = JSON.parse(guardados);
+      // Fusionar: mantener admin siempre, actualizar/añadir el resto
+      u.forEach(ug=>{
+        const idx = USUARIOS.findIndex(x=>x.id===ug.id);
+        if(idx===-1) USUARIOS.push(ug);
+        else if(ug.rol!=='admin') USUARIOS[idx]=ug;
+      });
+    }catch(e){}
+  }
 }
 
 function renderTablaUsuarios(){
@@ -343,11 +555,63 @@ function renderTablaUsuarios(){
       <td><span class="rol-badge rol-${u.rol}">${rolTexto(u.rol)}</span></td>
       <td>${u.ultimoAcceso}</td>
       <td>
-        <button class="btn-accion btn-editar" onclick="notif('Edición de usuario en construcción','info')">Editar</button>
-        <button class="btn-accion btn-eliminar" onclick="notif('Eliminación desactivada en demo','warn')" style="margin-left:6px;">Eliminar</button>
+        <button class="btn-accion btn-editar" onclick="abrirModalEditarUsuario(${u.id})">✏️ Editar</button>
+        <button class="btn-accion btn-eliminar" onclick="eliminarUsuario(${u.id})" style="margin-left:6px;">🗑️ Eliminar</button>
       </td>`;
     tbody.appendChild(tr);
   });
+}
+
+function abrirModalEditarUsuario(id){
+  const u = USUARIOS.find(x=>x.id===id);
+  if(!u) return;
+  document.getElementById('edit-id').value = u.id;
+  document.getElementById('edit-usuario').value = u.usuario;
+  document.getElementById('edit-nombre').value = u.nombre;
+  document.getElementById('edit-password').value = '';
+  document.getElementById('edit-rol').value = u.rol;
+  document.getElementById('modal-editar-usuario').style.display='flex';
+}
+
+function cerrarModalEditarUsuario(){
+  document.getElementById('modal-editar-usuario').style.display='none';
+}
+
+function guardarEdicionUsuario(){
+  const id = parseInt(document.getElementById('edit-id').value);
+  const usuario = document.getElementById('edit-usuario').value.trim();
+  const nombre = document.getElementById('edit-nombre').value.trim();
+  const password = document.getElementById('edit-password').value;
+  const rol = document.getElementById('edit-rol').value;
+  if(!usuario||!nombre){notif('Completa usuario y nombre','warn');return;}
+  // Verificar duplicado (excluyendo el mismo usuario)
+  if(USUARIOS.find(x=>x.usuario===usuario && x.id!==id)){notif('Ya existe ese nombre de usuario','warn');return;}
+  const idx = USUARIOS.findIndex(x=>x.id===id);
+  if(idx===-1) return;
+  USUARIOS[idx].usuario = usuario;
+  USUARIOS[idx].nombre = nombre;
+  USUARIOS[idx].rol = rol;
+  if(password && password.length>=6) USUARIOS[idx].password = password;
+  else if(password && password.length>0 && password.length<6){notif('La contraseña debe tener al menos 6 caracteres','warn');return;}
+  guardarUsuariosStorage();
+  registrarTrazabilidad('admin','admin','Editó usuario: '+usuario+' ('+rolTexto(rol)+')');
+  actualizarKPIs();
+  renderTablaUsuarios();
+  cerrarModalEditarUsuario();
+  notif('Usuario '+usuario+' actualizado ✓');
+}
+
+function eliminarUsuario(id){
+  const u = USUARIOS.find(x=>x.id===id);
+  if(!u) return;
+  if(!confirm('¿Eliminar al usuario "'+u.nombre+'" ('+u.usuario+')?\n\nEsta acción no se puede deshacer.')) return;
+  const idx = USUARIOS.findIndex(x=>x.id===id);
+  USUARIOS.splice(idx,1);
+  guardarUsuariosStorage();
+  registrarTrazabilidad('admin','admin','Eliminó usuario: '+u.usuario);
+  actualizarKPIs();
+  renderTablaUsuarios();
+  notif('Usuario eliminado','warn');
 }
 
 function renderTrazabilidad(){
@@ -356,10 +620,7 @@ function renderTrazabilidad(){
   TRAZABILIDAD.forEach(t=>{
     const d = document.createElement('div');
     d.className = 'trazo-item '+t.rol;
-    d.innerHTML = `
-      <div class="trazo-fecha">🕐 ${t.fecha}</div>
-      <div class="trazo-accion">${t.accion}</div>
-      <div class="trazo-usuario">👤 ${t.usuario} · <span class="rol-badge rol-${t.rol}">${rolTexto(t.rol)}</span></div>`;
+    d.innerHTML = `<div class="trazo-fecha">🕐 ${t.fecha}</div><div class="trazo-accion">${t.accion}</div><div class="trazo-usuario">👤 ${t.usuario} · <span class="rol-badge rol-${t.rol}">${rolTexto(t.rol)}</span></div>`;
     lista.appendChild(d);
   });
 }
@@ -443,45 +704,53 @@ function abrirModuloExtintores() {
     fecha: document.getElementById('meta-fecha').value,
     codigoFormato: document.getElementById('meta-codigo-formato').value
   };
-
   localStorage.setItem("datosInspeccion", JSON.stringify(datosSesion));
   window.location.href = "modulo_extintores.html";
 }
 
-// ========== REDIRECCIÓN DESDE MÓDULO ==========
 function verificarRedireccion() {
   const urlParams = new URLSearchParams(window.location.search);
   const mostrar = urlParams.get('mostrar');
-  
-  // Recuperar sesión si no existe
-  if (!sesion) {
-    sesion = recuperarSesionStorage();
-  }
-  
-  // Si no hay sesión, no hacemos nada (mostrar login)
+  if (!sesion) { sesion = recuperarSesionStorage(); }
   if (!sesion) return;
-  
-  // Si hay sesión y pide mostrar clientes
-  if (mostrar === 'clientes') {
-    irAClientes();
-  }
+  if (mostrar === 'clientes') { irAClientes(); }
 }
 
-// ========== INICIALIZACIÓN ==========
 document.addEventListener('DOMContentLoaded', () => {
-  // Recuperar sesión al cargar
+  cargarUsuariosStorage();
   sesion = recuperarSesionStorage();
-  
-  // Si hay sesión activa, redirigir a clientes automáticamente
   if (sesion && document.getElementById('pantalla-login').classList.contains('activa')) {
-    if (sesion.rol === 'admin') {
-      irAAdmin();
-    } else {
-      irAClientes();
-    }
+    if (sesion.rol === 'admin') { irAAdmin(); } else { irAClientes(); }
   }
-  
-  // Verificar redirección desde módulo
   verificarRedireccion();
 });
 </script>
+
+<!-- Modal editar usuario -->
+<div id="modal-editar-usuario" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:999;justify-content:center;align-items:center;">
+  <div style="background:white;border-radius:16px;width:480px;max-width:95vw;padding:32px;box-shadow:0 20px 60px rgba(0,0,0,.25);">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;">
+      <h3 style="color:#0c1e3f;font-size:1.1rem;">✏️ Editar Usuario</h3>
+      <button onclick="cerrarModalEditarUsuario()" style="background:#f1f5f9;border:none;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:1.1rem;">✖</button>
+    </div>
+    <input type="hidden" id="edit-id">
+    <div class="fu-grid">
+      <div class="fu-field"><label>Usuario (login)</label><input type="text" id="edit-usuario" placeholder="ej: tecnico2"></div>
+      <div class="fu-field"><label>Nueva contraseña <small style="color:#9ca3af;">(vacío = no cambiar)</small></label><input type="password" id="edit-password" placeholder="mínimo 6 chars"></div>
+      <div class="fu-field"><label>Nombre completo</label><input type="text" id="edit-nombre" placeholder="Juan Pérez"></div>
+      <div class="fu-field"><label>Rol</label>
+        <select id="edit-rol">
+          <option value="supervisor">Supervisor</option>
+          <option value="tecnico">Técnico</option>
+        </select>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:20px;justify-content:flex-end;">
+      <button onclick="cerrarModalEditarUsuario()" style="background:#f1f5f9;border:none;border-radius:8px;padding:10px 20px;cursor:pointer;font-weight:600;">Cancelar</button>
+      <button onclick="guardarEdicionUsuario()" style="background:linear-gradient(135deg,#0c1e3f,#982a2a);color:white;border:none;border-radius:8px;padding:10px 24px;font-weight:700;cursor:pointer;">💾 Guardar cambios</button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
