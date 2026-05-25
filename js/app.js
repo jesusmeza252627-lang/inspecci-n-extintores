@@ -144,6 +144,59 @@ function numerarObservaciones(e) {
   }
 }
 
+function actualizarUnidadesCapacidad() {
+  const tipoAgente = document.getElementById("tipoAgente").value;
+  const unidadSelect = document.getElementById("unidadCapacidad");
+
+    // Si no hay agente seleccionado
+  if (!tipoAgente) {
+    unidadSelect.innerHTML = '<option value="" disabled selected>Unidad</option>';;
+    return;
+  }
+
+  unidadSelect.innerHTML = '<option value="" disabled selected>Unidad</option>';;
+
+  let unidades = [];
+
+  switch (tipoAgente) {
+    case "PQS":
+      unidades = ["Kg."];
+      break;
+
+    case "CO2":
+      unidades = ["Lb."];
+      break;
+
+    case "H2O-P":
+      unidades = ["L.", "Gal."];
+      break;
+
+    case "H2O-DI":
+      unidades = ["L.", "Gal."];
+      break;
+
+    case "ADP/PK":
+      unidades = ["Kg."];
+      break;
+
+    case "Otros":
+      unidades = ["Kg.", "Lb.", "L.", "Gal.", "ml."];
+      break;
+  }
+
+  unidades.forEach(unidad => {
+    const option = document.createElement("option");
+    option.value = unidad;
+    option.textContent = unidad;
+    unidadSelect.appendChild(option);
+  });
+
+  // Si solo existe una opción válida, seleccionarla automáticamente
+  if (unidades.length === 1) {
+    unidadSelect.value = unidades[0];
+  }
+}
+
 async function filesToDataUrls(files) {
   const arr = Array.from(files || []);
   return Promise.all(arr.map(file => new Promise((resolve, reject) => {
@@ -340,9 +393,9 @@ function limpiarFormulario() {
   editId = null; 
   eliminarImagenes = false; 
   document.getElementById("tipoAgente").value = "";
+  actualizarUnidadesCapacidad();
   document.getElementById("numeroExtintor").value = "";
   document.getElementById("capacidad").value = "";
-  document.getElementById("unidadCapacidad").value = "";
   document.getElementById("ubicacion").value = "";
   document.getElementById("referencia").value = "";
   document.getElementById("zonaRiesgo").value = "";
@@ -372,6 +425,7 @@ function editarRegistro(id) {
   autocompletarCliente();
   document.getElementById("fechaInspeccion").value = r.fecha;
   document.getElementById("tipoAgente").value = r.tipoAgente;
+  actualizarUnidadesCapacidad();
   document.getElementById("numeroExtintor").value = r.numeroExtintor;
   const capacidadSplit = r.capacidad.split(" ");
   document.getElementById("capacidad").value = capacidadSplit[0] || "";

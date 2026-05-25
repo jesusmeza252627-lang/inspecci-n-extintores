@@ -78,7 +78,7 @@
 
         <div class="field">
           <label>Tipo de Agente</label>
-          <select id="tipoAgente">
+          <select id="tipoAgente" onchange="actualizarUnidadesCapacidad()">
             <option value="">Seleccione</option>
             <option>PQS</option>
             <option>CO2</option>
@@ -94,7 +94,7 @@
           <div style="display:flex; gap:8px;">
             <input id="capacidad" type="number" min="0.1" step="0.01" placeholder="Cantidad" style="flex:1;">
             <select id="unidadCapacidad" style="width:120px;">
-              <option value="">Unidad</option>
+              <option value="" disabled selected>Unidad</option>
               <option value="Kg.">Kg.</option>
               <option value="L.">L.</option>
               <option value="Lb.">Lb.</option>
