@@ -1742,12 +1742,26 @@ async function descargarPDF() {
     hoja.style.overflow = prevOverflow;
     hoja.style.background = prevBackground;
 
-    // Verificar si el canvas salió correcto
-    const imgData = canvas.toDataURL("image/jpeg", 0.98);
-    
-    // Verificar si la imagen está en blanco/negro
-    if (imgData === canvas.toDataURL("image/jpeg", 0.98)) {
-      console.log("Canvas generado correctamente");
+    // 🔥 VALIDACIÓN
+    if (!canvas.width || !canvas.height) {
+      console.warn("Canvas vacío, se omite");
+      continue;
+    }
+
+    // 🔥 VALIDAR CANVAS ANTES DE USARLO
+    let imgData = null;
+
+    try {
+      imgData = canvas.toDataURL("image/jpeg", 0.98);
+    } catch (e) {
+      console.warn("Error generando imagen del canvas", e);
+      continue; // saltar esta hoja
+    }
+
+    // 🔥 VALIDAR QUE LA IMAGEN SEA CORRECTA
+    if (!imgData || !imgData.startsWith("data:image")) {
+      console.warn("Imagen inválida");
+      continue;
     }
 
     const canvasRatio = canvas.height / canvas.width;
@@ -1755,9 +1769,13 @@ async function descargarPDF() {
 
     if (i > 0) pdf.addPage();
 
-    // Forzar que la imagen se añada correctamente
-    pdf.addImage(imgData, "JPEG", 0, 0, A4_W, Math.min(imgH, A4_H), undefined, 'FAST');
-  }
+    try {
+      pdf.addImage(imgData, "JPEG", 0, 0, A4_W, Math.min(imgH, A4_H));
+    } catch (e) {
+      console.warn("Error agregando imagen al PDF", e);
+    }
+
+ }
 
   pdf.save(`Informe_${cliente}.pdf`);
 }
