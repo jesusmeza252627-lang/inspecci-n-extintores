@@ -9,6 +9,24 @@ let anomaliaChart = null;
 let prioridadChart = null;
 let eliminarImagenes = false;
 
+// ── Notificaciones (función propia del módulo) ──
+let _notifTimer = null;
+function notif(msg, tipo = "ok") {
+  let el = document.getElementById("notif-app");
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "notif-app";
+    el.style.cssText = "position:fixed;top:20px;right:20px;z-index:9999;padding:13px 20px;border-radius:10px;font-weight:600;font-size:.9rem;color:white;box-shadow:0 6px 20px rgba(0,0,0,.25);display:none;max-width:340px;";
+    document.body.appendChild(el);
+  }
+  const colores = { ok:"#16a34a", success:"#16a34a", warn:"#d97706", error:"#dc2626", info:"#2563eb" };
+  el.style.background = colores[tipo] || colores.ok;
+  el.textContent = msg;
+  el.style.display = "block";
+  clearTimeout(_notifTimer);
+  _notifTimer = setTimeout(() => { el.style.display = "none"; }, 3500);
+}
+
 // ── Inicialización ──
 async function init() {
   if (!cargarDatosSesion()) return; // Redirige si no hay sesión
