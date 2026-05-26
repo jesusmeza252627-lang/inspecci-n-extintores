@@ -187,7 +187,10 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:var(--gris-fondo);min-he
     </div>
     <div class="login-field">
       <label>Contraseña</label>
-      <input type="password" id="inp-password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
+      <div style="position:relative;">
+        <input type="password" id="inp-password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()" style="padding-right:44px; width:100%;">
+        <button type="button" onclick="togglePasswordVisibility()" id="btn-toggle-pass" style="position:absolute;right:0;top:0;height:100%;width:42px;background:none;border:none;cursor:pointer;color:#6b7280;font-size:1.1rem;display:flex;align-items:center;justify-content:center;" title="Mostrar/ocultar contraseña">👁️</button>
+      </div>
     </div>
     <button class="btn-login" onclick="doLogin()">Iniciar Sesión</button>
     <div class="error-msg" id="error-login">Usuario o contraseña incorrectos.</div>
@@ -433,6 +436,20 @@ function limpiarSesionStorage() {
 function pantalla(id){
   document.querySelectorAll('.pantalla').forEach(p=>p.classList.remove('activa'));
   document.getElementById('pantalla-'+id).classList.add('activa');
+}
+
+function togglePasswordVisibility(){
+  const inp = document.getElementById('inp-password');
+  const btn = document.getElementById('btn-toggle-pass');
+  if(inp.type==='password'){
+    inp.type='text';
+    btn.textContent='🙈';
+    btn.title='Ocultar contraseña';
+  } else {
+    inp.type='password';
+    btn.textContent='👁️';
+    btn.title='Mostrar contraseña';
+  }
 }
 
 function doLogin(){

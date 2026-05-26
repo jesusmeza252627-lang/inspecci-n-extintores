@@ -566,11 +566,7 @@ function renderTabla() {
     for (let a = 1; a <= 20; a++) {
       const tieneAnomalia = r["a" + a];
       anomaliasHtml += `
-        <td class="anomalia-cell"
-            data-registro="${r.id}"
-            data-anomalia="${a}"
-            style="text-align:center; cursor:pointer;"
-            onclick="toggleAnomaliaSeguimiento('${r.id}', ${a})">
+        <td class="anomalia-cell" style="text-align:center;">
             ${tieneAnomalia
                 ? '<span style="color:red;font-size:12px;">❌</span>'
                 : '<span style="color:green;font-size:16px;">✔</span>'}
@@ -598,16 +594,30 @@ function renderTabla() {
         <div class="thumbs">${(r.imagenes || []).map(img => `<img src="${img}">`).join("")}</div>
       </td>
       <td class="seguimiento-cell" style="text-align:center; background:#fef3c7;">
-        <div class="seguimiento-estado" id="seguimiento-${r.id}">
+        <div class="seguimiento-estado" id="seguimiento-${i}">
           ${renderSeguimientoEstado(r.id, seguimiento)}
         </div>
       </td>
-      <td class="acciones-cell" style="white-space:nowrap;">
-        <button class="mini-btn warning" onclick="editarRegistro('${r.id}')">✏️</button>
-        <button class="mini-btn danger" onclick="eliminarRegistro('${r.id}')">🗑️</button>
+      <td class="acciones-cell" style="white-space:nowrap; text-align:center;">
+        <button class="mini-btn warning btn-editar-reg" data-id="${r.id}" title="Editar registro" style="cursor:pointer;">✏️</button>
+        <button class="mini-btn danger btn-eliminar-reg" data-id="${r.id}" title="Eliminar registro" style="cursor:pointer; margin-left:4px;">🗑️</button>
       </td>
     `;
     tbody.appendChild(tr);
+  });
+  
+  // Asignar eventos con addEventListener — más robusto que onclick inline
+  tbody.querySelectorAll(".btn-editar-reg").forEach(btn => {
+    btn.addEventListener("click", function(e) {
+      e.stopPropagation();
+      editarRegistro(this.dataset.id);
+    });
+  });
+  tbody.querySelectorAll(".btn-eliminar-reg").forEach(btn => {
+    btn.addEventListener("click", function(e) {
+      e.stopPropagation();
+      eliminarRegistro(this.dataset.id);
+    });
   });
   
   if (!registros.length) {
